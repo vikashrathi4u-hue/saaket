@@ -8,15 +8,15 @@ export async function onRequestPost(context) {
     // 1. Build the Sales History Query
     let salesQuery = `${url}/rest/v1/sales_history?select=bill_no,item_name,brand,sale_value`;
     
-    // Fix: Properly format the "in" filter for Supabase
     if (items && items.length > 0) {
+      // Use URL encoding for special characters in item names
       const itemFilter = items.map(i => `"${i}"`).join(',');
-      salesQuery += `&item_name=in.(${itemFilter})`;
+      salesQuery += `&item_name=in.(${encodeURIComponent(itemFilter)})`;
     }
     
     if (brands && brands.length > 0) {
       const brandFilter = brands.map(b => `"${b}"`).join(',');
-      salesQuery += `&brand=in.(${brandFilter})`;
+      salesQuery += `&brand=in.(${encodeURIComponent(brandFilter)})`;
     }
     
     if (startDate) salesQuery += `&bill_date=gte.${startDate}`;
@@ -28,20 +28,31 @@ export async function onRequestPost(context) {
     
     const salesData = await salesRes.json();
 
-    // If no sales found, stop early
-    if (!salesData || salesData.length === 0) {
+    // --- NEW VALIDATION BLOCK ---
+    if (!Array.isArray(salesData)) {
+      console.error("Supabase Error or Unexpected Response:", salesData);
+      // Return an empty array so the frontend doesn't crash, 
+      // but you'll see the real error in your Cloudflare Logs
       return new Response(JSON.stringify([]), { headers: { "Content-Type": "application/json" } });
     }
 
-    // 2. Fetch Customer Details for these specific bills
+    if (salesData.length === 0) {
+      return new Response(JSON.stringify([]), { headers: { "Content-Type": "application/json" } });
+    }
+
+    // 2. Fetch Customer Details
     const billNos = [...new Set(salesData.map(s => s.bill_no))];
-    // Chunking might be needed if billNos > 100, but starting with standard filter:
     const billFilter = billNos.map(b => `"${b}"`).join(',');
     
-    const summaryRes = await fetch(`${url}/rest/v1/bill_summaries?bill_no=in.(${billFilter})&select=bill_no,mobile_no,customer_name,total_amount`, {
+    const summaryRes = await fetch(`${url}/rest/v1/bill_summaries?bill_no=in.(${encodeURIComponent(billFilter)})&select=bill_no,mobile_no,customer_name,total_amount`, {
       headers: { "apikey": key, "Authorization": `Bearer ${key}` }
     });
+    
     const summaryData = await summaryRes.json();
+
+    if (!Array.isArray(summaryData)) {
+       return new Response(JSON.stringify([]), { headers: { "Content-Type": "application/json" } });
+    }
 
     // 3. Process and Aggregate
     const reportMap = {};
@@ -66,7 +77,6 @@ export async function onRequestPost(context) {
         const cust = reportMap[bill.mobile_no];
         const val = parseFloat(sale.sale_value || 0);
         
-        // Only add to these columns if they were part of the user's filter
         if (items?.includes(sale.item_name)) cust.itemSale += val;
         if (brands?.includes(sale.brand)) cust.brandSale += val;
       }
@@ -77,7 +87,6 @@ export async function onRequestPost(context) {
     });
 
   } catch (err) {
-    console.error(err);
     return new Response(JSON.stringify({ error: err.message }), { status: 500 });
   }
 }
