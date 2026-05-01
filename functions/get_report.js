@@ -5,11 +5,11 @@ export async function onRequestPost(context) {
   try {
     const { items, brand, startDate, endDate } = await context.request.json();
 
-    // 1. Build the query for sales_history
-    // We use quotes around values to handle spaces in names like "BABY PRODUCTS"
+    // 1. Build the query for sales_history with proper quote wrapping
     let query = `${url}/rest/v1/sales_history?select=bill_no`;
     
     if (items && items.length > 0) {
+      // Wraps each item in quotes to handle spaces (e.g., "BABY PRODUCTS")
       const formattedItems = items.map(i => `"${i}"`).join(',');
       query += `&item_name=in.(${formattedItems})`;
     }
@@ -31,7 +31,7 @@ export async function onRequestPost(context) {
 
     if (!salesRes.ok) {
       const errorText = await salesRes.text();
-      throw new Error(`Supabase Sales Error: ${errorText}`);
+      throw new Error(`Sales History Fetch Failed: ${errorText}`);
     }
 
     const salesData = await salesRes.json();
@@ -43,8 +43,7 @@ export async function onRequestPost(context) {
       return new Response(JSON.stringify([]), { headers: { "Content-Type": "application/json" } });
     }
 
-    // 3. Fetch Customer details
-    // Wrap bill numbers in quotes to ensure they are treated as strings if needed
+    // 3. Fetch Customer details using the filtered Bill Numbers
     const formattedBills = billNumbers.map(b => `"${b}"`).join(',');
     const customerQuery = `${url}/rest/v1/customers?bill_no=in.(${formattedBills})&select=mobile_no`;
 
@@ -58,12 +57,12 @@ export async function onRequestPost(context) {
 
     if (!customerRes.ok) {
       const errorText = await customerRes.text();
-      throw new Error(`Supabase Customer Error: ${errorText}`);
+      throw new Error(`Customer Data Fetch Failed: ${errorText}`);
     }
 
     const customerData = await customerRes.json();
 
-    // 4. Return unique mobile numbers
+    // 4. Return unique, non-empty mobile numbers
     const uniqueMobiles = [...new Set(customerData.map(c => c.mobile_no))].filter(m => m && m.trim() !== "");
     
     return new Response(JSON.stringify(uniqueMobiles), { 
@@ -71,7 +70,7 @@ export async function onRequestPost(context) {
     });
 
   } catch (err) {
-    // This will now show up in your Cloudflare dashboard logs
+    // Returns the specific error message to help with debugging
     return new Response(JSON.stringify({ error: err.message }), { status: 500 });
   }
 }
