@@ -3,13 +3,14 @@ export async function onRequestPost(context) {
   const key = context.env.SUPABASE_ANON_KEY;
 
   try {
-    const { items, brand, source } = await context.request.json();
+    const { items, brands, source } = await context.request.json();
     let query = `${url}/rest/v1/sales_history?select=item_name,brand`;
 
-    if (source === 'item' && items.length > 0) {
-      query += `&item_name=in.(${items.map(i => `"${i}"`).join(',')})`;
-    } else if (source === 'brand' && brand) {
-      query += `&brand=eq."${brand}"`;
+    // Support multiple selections for both items and brands
+    if (source === 'item' && items?.length > 0) {
+      query += `&item_name=in.(${items.map(i => `"${encodeURIComponent(i)}"`).join(',')})`;
+    } else if (source === 'brand' && brands?.length > 0) {
+      query += `&brand=in.(${brands.map(b => `"${encodeURIComponent(b)}"`).join(',')})`;
     }
 
     const res = await fetch(query, {
