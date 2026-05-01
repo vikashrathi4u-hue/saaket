@@ -43,7 +43,7 @@
                 if (res.status === 200) {
                     const data = await res.json();
                     alert('Welcome back, ' + userField.value + '! Role: ' + data.role);
-                    // Next step: window.location.href = '/dashboard';
+                    window.location.href = '/dashboard';
                 } else {
                     msg.innerText = 'Invalid credentials. Please try again.';
                     btn.disabled = false;
