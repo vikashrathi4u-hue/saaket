@@ -5,7 +5,7 @@ export async function onRequestPost(context) {
   try {
     const { items, brand, startDate, endDate } = await context.request.json();
 
-    // 1. Get Bill Numbers from sales_history
+    // 1. Get unique Bill Numbers from sales_history[cite: 6]
     let salesQuery = `${url}/rest/v1/sales_history?select=bill_no`;
     
     if (items && items.length > 0) {
@@ -21,8 +21,6 @@ export async function onRequestPost(context) {
       headers: { "apikey": key, "Authorization": `Bearer ${key}` }
     });
     const salesData = await salesRes.json();
-    
-    // Filter out duplicates and nulls
     const billNumbers = [...new Set(salesData.map(s => s.bill_no))].filter(b => b);
 
     if (billNumbers.length === 0) {
@@ -38,7 +36,7 @@ export async function onRequestPost(context) {
     });
     const summaryData = await summaryRes.json();
 
-    // 3. Filter for Unique Customers (Mobile + Name combo)[cite: 6]
+    // 3. Filter for unique Customer + Mobile combinations[cite: 6]
     const uniqueList = [];
     const seen = new Set();
 
@@ -47,7 +45,6 @@ export async function onRequestPost(context) {
         const identifier = `${row.mobile_no}-${row.customer_name}`;
         if (!seen.has(identifier)) {
           seen.add(identifier);
-          // Formatting the output as "Name (Mobile)"
           uniqueList.push(`${row.customer_name || 'Walk-in'} (${row.mobile_no})`);
         }
       }
