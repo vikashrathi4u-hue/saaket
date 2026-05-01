@@ -13,26 +13,29 @@
         .active { background: #e67e22 !important; color: white; }
         .main-content { flex-grow: 1; padding: 40px; overflow-y: auto; }
         .card { background: white; padding: 25px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); }
-        .filter-grid { display: grid; gap: 20px; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); margin-bottom: 20px; }
-        label { display: block; margin-bottom: 8px; font-weight: bold; color: #34495e; }
-        select, input { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px; }
-        select[multiple] { height: 120px; }
-        .action-btn { background: #e67e22; color: white; border: none; padding: 12px 24px; cursor: pointer; border-radius: 4px; font-weight: bold; }
-        .action-btn:disabled { background: #bdc3c7; }
         
-        /* Table Styling */
-        table { width: 100%; border-collapse: collapse; margin-top: 10px; background: white; }
+        /* Filter Styling */
+        .filter-grid { display: grid; gap: 20px; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); margin-bottom: 20px; }
+        .checkbox-container { border: 1px solid #ddd; border-radius: 4px; height: 150px; overflow-y: auto; padding: 10px; background: #fff; }
+        .checkbox-item { display: flex; align-items: center; margin-bottom: 5px; font-size: 0.9rem; }
+        .checkbox-item input { width: auto; margin-right: 10px; cursor: pointer; }
+        label { display: block; margin-bottom: 8px; font-weight: bold; color: #34495e; }
+        input[type="date"] { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px; }
+        
+        .btn-group { display: flex; gap: 10px; margin-bottom: 20px; }
+        .action-btn { background: #e67e22; color: white; border: none; padding: 12px 24px; cursor: pointer; border-radius: 4px; font-weight: bold; }
+        .reset-btn { background: #95a5a6; color: white; border: none; padding: 12px 24px; cursor: pointer; border-radius: 4px; font-weight: bold; }
+        .action-btn:disabled { background: #bdc3c7; }
+
+        /* Table & Pagination */
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
         th { background: #2c3e50; color: white; text-align: left; padding: 12px; border: 1px solid #ddd; }
         td { padding: 10px; border: 1px solid #ddd; }
         tr:nth-child(even) { background: #f9f9f9; }
-
-        /* Pagination Styling */
         .pag-btn { background: #ecf0f1; border: 1px solid #bdc3c7; padding: 5px 15px; cursor: pointer; border-radius: 4px; margin-left: 5px; }
-        .pag-btn:disabled { cursor: not-allowed; opacity: 0.5; }
     </style>
 </head>
 <body>
-
     <div class="sidebar">
         <h2>Rajratan Admin</h2>
         <button class="nav-btn" onclick="showPage('addUser', this)">Add User</button>
@@ -53,7 +56,7 @@
     <script>
         let allItems = [];
         let allBrands = [];
-        let reportData = []; 
+        let reportData = [];
         let currentPage = 1;
         const rowsPerPage = 50;
 
@@ -69,15 +72,11 @@
                     <div class="filter-grid">
                         <div>
                             <label>Item Names</label>
-                            <select id="itemSelect" multiple onchange="applyCascadingFilter('item')">
-                                <option>Loading...</option>
-                            </select>
+                            <div id="itemCheckboxes" class="checkbox-container">Loading...</div>
                         </div>
                         <div>
-                            <label>Brand Name</label>
-                            <select id="brandSelect" onchange="applyCascadingFilter('brand')">
-                                <option value="">-- All Brands --</option>
-                            </select>
+                            <label>Brand Names</label>
+                            <div id="brandCheckboxes" class="checkbox-container">Loading...</div>
                         </div>
                         <div>
                             <label>Start Date</label>
@@ -88,7 +87,10 @@
                             <input type="date" id="endDate">
                         </div>
                     </div>
-                    <button class="action-btn" id="genBtn" onclick="generateReport()">Generate Report</button>
+                    <div class="btn-group">
+                        <button class="action-btn" id="genBtn" onclick="generateReport()">Generate Report</button>
+                        <button class="reset-btn" onclick="resetFilters()">Reset Filters</button>
+                    </div>
                     
                     <div id="reportHeader" style="margin-top: 25px; display: none; justify-content: space-between; align-items: center;">
                         <h3 style="color: #2c3e50; border-bottom: 2px solid #e67e22; padding-bottom: 5px; margin: 0;">
@@ -96,7 +98,6 @@
                         </h3>
                         <div id="paginationControls"></div>
                     </div>
-                    
                     <div id="reportResult" style="margin-top: 10px;"></div>
                 `;
                 fetchFilterData();
@@ -112,31 +113,59 @@
                 const data = await res.json();
                 allItems = data.items;
                 allBrands = data.brands;
-                populateDropdown('itemSelect', allItems);
-                populateDropdown('brandSelect', allBrands, true);
+                populateCheckboxes('itemCheckboxes', allItems, 'item');
+                populateCheckboxes('brandCheckboxes', allBrands, 'brand');
             } catch (e) { console.error("Filter fetch failed", e); }
         }
 
-        function populateDropdown(id, list, hasDefault = false) {
-            const el = document.getElementById(id);
-            let html = hasDefault ? '<option value="">-- All Brands --</option>' : '';
-            list.forEach(item => { html += `<option value="${item}">${item}</option>`; });
-            el.innerHTML = html;
+        function populateCheckboxes(containerId, list, type) {
+            const container = document.getElementById(containerId);
+            container.innerHTML = list.map(val => `
+                <div class="checkbox-item">
+                    <input type="checkbox" value="${val}" class="${type}-cb" onchange="applyCascadingFilter('${type}')">
+                    <span>${val}</span>
+                </div>
+            `).join('');
         }
 
         async function applyCascadingFilter(source) {
-            const selectedItems = Array.from(document.getElementById('itemSelect').selectedOptions).map(o => o.value);
-            const selectedBrand = document.getElementById('brandSelect').value;
+            const selectedItems = Array.from(document.querySelectorAll('.item-cb:checked')).map(cb => cb.value);
+            const selectedBrands = Array.from(document.querySelectorAll('.brand-cb:checked')).map(cb => cb.value);
+
             const res = await fetch('/filter_cascade', {
                 method: 'POST',
-                body: JSON.stringify({ items: selectedItems, brand: selectedBrand, source })
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ items: selectedItems, brands: selectedBrands, source })
             });
             const filtered = await res.json();
+
             if (source === 'item' && selectedItems.length > 0) {
-                populateDropdown('brandSelect', filtered.brands, true);
-            } else if (source === 'brand' && selectedBrand !== "") {
-                populateDropdown('itemSelect', filtered.items);
+                updateCheckboxes('brandCheckboxes', filtered.brands, 'brand', selectedBrands);
+            } else if (source === 'brand' && selectedBrands.length > 0) {
+                updateCheckboxes('itemCheckboxes', filtered.items, 'item', selectedItems);
+            } else if (selectedItems.length === 0 && selectedBrands.length === 0) {
+                fetchFilterData(); // Reset to all if nothing selected
             }
+        }
+
+        function updateCheckboxes(containerId, newList, type, currentSelected) {
+            const container = document.getElementById(containerId);
+            container.innerHTML = newList.map(val => `
+                <div class="checkbox-item">
+                    <input type="checkbox" value="${val}" class="${type}-cb" 
+                        ${currentSelected.includes(val) ? 'checked' : ''} 
+                        onchange="applyCascadingFilter('${type}')">
+                    <span>${val}</span>
+                </div>
+            `).join('');
+        }
+
+        function resetFilters() {
+            document.getElementById('startDate').value = '';
+            document.getElementById('endDate').value = '';
+            fetchFilterData();
+            document.getElementById('reportHeader').style.display = 'none';
+            document.getElementById('reportResult').innerHTML = '';
         }
 
         async function generateReport() {
@@ -145,22 +174,21 @@
             const headerDiv = document.getElementById('reportHeader');
             const countSpan = document.getElementById('customerCount');
             
-            const items = Array.from(document.getElementById('itemSelect').selectedOptions).map(o => o.value);
-            const brand = document.getElementById('brandSelect').value;
+            const items = Array.from(document.querySelectorAll('.item-cb:checked')).map(cb => cb.value);
+            const brands = Array.from(document.querySelectorAll('.brand-cb:checked')).map(cb => cb.value);
             const start = document.getElementById('startDate').value;
             const end = document.getElementById('endDate').value;
 
             btn.disabled = true;
-            resDiv.innerHTML = "<i>Processing unique records...</i>";
-            headerDiv.style.display = "none";
-
+            resDiv.innerHTML = "<i>Searching records...</i>";
+            
             try {
                 const response = await fetch('/get_report', {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({ items, brand, startDate: start, endDate: end })
+                    body: JSON.stringify({ items, brands, startDate: start, endDate: end })
                 });
-                reportData = await response.json(); 
+                reportData = await response.json();
                 
                 if (reportData.length > 0) {
                     headerDiv.style.display = "flex";
@@ -169,6 +197,7 @@
                     renderTablePage(1);
                 } else {
                     resDiv.innerText = "No unique customers found.";
+                    headerDiv.style.display = "none";
                 }
             } catch (err) {
                 resDiv.innerText = "Error generating report.";
@@ -178,44 +207,22 @@
         function renderTablePage(page) {
             const resDiv = document.getElementById('reportResult');
             const pagDiv = document.getElementById('paginationControls');
-            
             const start = (page - 1) * rowsPerPage;
-            const end = start + rowsPerPage;
-            const pageData = reportData.slice(start, end);
+            const pageData = reportData.slice(start, start + rowsPerPage);
 
-            let html = `
-                <table>
-                    <thead>
-                        <tr>
-                            <th style="width: 80px;">Sr. No</th>
-                            <th>Customer Name & Mobile Number</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-            `;
-
+            let html = `<table><thead><tr><th style="width: 80px;">Sr. No</th><th>Customer Name & Mobile Number</th></tr></thead><tbody>`;
             pageData.forEach((customer, index) => {
-                html += `
-                    <tr>
-                        <td>${start + index + 1}</td>
-                        <td>${customer}</td>
-                    </tr>
-                `;
+                html += `<tr><td>${start + index + 1}</td><td>${customer}</td></tr>`;
             });
-
             html += `</tbody></table>`;
             resDiv.innerHTML = html;
 
             const totalPages = Math.ceil(reportData.length / rowsPerPage);
-            let pagHtml = '';
-            if (totalPages > 1) {
-                pagHtml = `
-                    <button class="pag-btn" onclick="changePage(${page - 1})" ${page === 1 ? 'disabled' : ''}>Prev</button>
-                    <span style="margin: 0 10px; font-weight: bold;">Page ${page} of ${totalPages}</span>
-                    <button class="pag-btn" onclick="changePage(${page + 1})" ${page === totalPages ? 'disabled' : ''}>Next</button>
-                `;
-            }
-            pagDiv.innerHTML = pagHtml;
+            pagDiv.innerHTML = totalPages > 1 ? `
+                <button class="pag-btn" onclick="changePage(${page - 1})" ${page === 1 ? 'disabled' : ''}>Prev</button>
+                <span style="margin: 0 10px; font-weight: bold;">Page ${page} of ${totalPages}</span>
+                <button class="pag-btn" onclick="changePage(${page + 1})" ${page === totalPages ? 'disabled' : ''}>Next</button>
+            ` : '';
         }
 
         function changePage(newPage) {

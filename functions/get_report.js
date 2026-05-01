@@ -3,9 +3,9 @@ export async function onRequestPost(context) {
   const key = context.env.SUPABASE_ANON_KEY;
   
   try {
-    const { items, brand, startDate, endDate } = await context.request.json();
+    const { items, brands, startDate, endDate } = await context.request.json();
 
-    // 1. Get unique Bill Numbers from sales_history[cite: 6]
+    // 1. Get unique Bill Numbers from sales_history
     let salesQuery = `${url}/rest/v1/sales_history?select=bill_no`;
     
     if (items && items.length > 0) {
@@ -13,7 +13,12 @@ export async function onRequestPost(context) {
       salesQuery += `&item_name=in.(${formattedItems})`;
     }
     
-    if (brand) salesQuery += `&brand=eq."${brand}"`;
+    // Now handling multiple brands from checkboxes
+    if (brands && brands.length > 0) {
+      const formattedBrands = brands.map(b => `"${b}"`).join(',');
+      salesQuery += `&brand=in.(${formattedBrands})`;
+    }
+    
     if (startDate) salesQuery += `&bill_date=gte.${startDate}`;
     if (endDate) salesQuery += `&bill_date=lte.${endDate}`;
 
@@ -36,7 +41,7 @@ export async function onRequestPost(context) {
     });
     const summaryData = await summaryRes.json();
 
-    // 3. Filter for unique Customer + Mobile combinations[cite: 6]
+    // 3. Filter for unique Customer + Mobile combinations
     const uniqueList = [];
     const seen = new Set();
 
@@ -50,7 +55,7 @@ export async function onRequestPost(context) {
       }
     });
     
-    return new Response(JSON.stringify(uniqueList), { 
+    return new Response(JSON.stringify(uniqueList.sort()), { 
       headers: { "Content-Type": "application/json" } 
     });
 
