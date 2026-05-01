@@ -5,9 +5,9 @@ export async function onRequestPost(context) {
   try {
     const { items, brands, startDate, endDate } = await context.request.json();
 
-    let salesQuery = `${url}/rest/v1/sales_history?select=bill_no,item_name,brand,sale_value`;
+    // 1. Updated to use 'net_sale_value' as per your SQL
+    let salesQuery = `${url}/rest/v1/sales_history?select=bill_no,item_name,brand,net_sale_value`;
     
-    // Fix: Encode individual values, not the entire "in.()" string
     if (items && items.length > 0) {
       const itemFilter = items.map(i => `"${encodeURIComponent(i)}"`).join(',');
       salesQuery += `&item_name=in.(${itemFilter})`;
@@ -21,22 +21,18 @@ export async function onRequestPost(context) {
     if (startDate) salesQuery += `&bill_date=gte.${startDate}`;
     if (endDate) salesQuery += `&bill_date=lte.${endDate}`;
 
-    const salesRes = await fetch(salesQuery, { 
-      headers: { "apikey": key, "Authorization": `Bearer ${key}` } 
-    });
-    
+    const salesRes = await fetch(salesQuery, { headers: { "apikey": key, "Authorization": `Bearer ${key}` } });
     const salesData = await salesRes.json();
 
-    // Validation: Ensure we have an array and data exists
     if (!Array.isArray(salesData) || salesData.length === 0) {
       return new Response(JSON.stringify([]), { headers: { "Content-Type": "application/json" } });
     }
 
-    // Fetch Customer Details
+    // 2. Fetching 'gross_total' instead of 'total_amount'[cite: 3]
     const billNos = [...new Set(salesData.map(s => s.bill_no))];
     const billFilter = billNos.map(b => `"${encodeURIComponent(b)}"`).join(',');
     
-    const summaryRes = await fetch(`${url}/rest/v1/bill_summaries?bill_no=in.(${billFilter})&select=bill_no,mobile_no,customer_name,total_amount`, {
+    const summaryRes = await fetch(`${url}/rest/v1/bill_summaries?bill_no=in.(${billFilter})&select=bill_no,mobile_no,customer_name,gross_total`, {
       headers: { "apikey": key, "Authorization": `Bearer ${key}` }
     });
     
@@ -49,14 +45,16 @@ export async function onRequestPost(context) {
       if (!reportMap[mobile]) {
         reportMap[mobile] = { name: bill.customer_name || "Walk-in", mobile, totalSale: 0, itemSale: 0, brandSale: 0 };
       }
-      reportMap[mobile].totalSale += parseFloat(bill.total_amount || 0);
+      // Summing 'gross_total'[cite: 3]
+      reportMap[mobile].totalSale += parseFloat(bill.gross_total || 0);
     });
 
     salesData.forEach(sale => {
       const bill = summaryData.find(b => b.bill_no === sale.bill_no);
       if (bill && reportMap[bill.mobile_no]) {
         const cust = reportMap[bill.mobile_no];
-        const val = parseFloat(sale.sale_value || 0);
+        // Summing 'net_sale_value'[cite: 3]
+        const val = parseFloat(sale.net_sale_value || 0);
         if (items?.includes(sale.item_name)) cust.itemSale += val;
         if (brands?.includes(sale.brand)) cust.brandSale += val;
       }
