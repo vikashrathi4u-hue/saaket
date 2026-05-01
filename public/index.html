@@ -2,23 +2,24 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>KF Login</title>
+    <title>Rajratan Login</title>
     <style>
-        body { font-family: sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; background: #f0f2f5; }
-        .login-card { background: white; padding: 2rem; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); width: 300px; }
-        h2 { text-align: center; color: #333; }
-        input { display: block; width: 100%; margin-bottom: 1rem; padding: 0.5rem; box-sizing: border-box; }
-        button { width: 100%; padding: 0.5rem; background: #007bff; color: white; border: none; cursor: pointer; border-radius: 4px; }
-        button:disabled { background: #ccc; }
-        #msg { color: red; text-align: center; font-size: 0.9rem; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; background: #2c3e50; margin: 0; }
+        .login-card { background: white; padding: 2.5rem; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.2); width: 320px; }
+        h2 { text-align: center; color: #1a252f; margin-bottom: 1.5rem; }
+        input { display: block; width: 100%; margin-bottom: 1.2rem; padding: 0.7rem; border: 1px solid #ddd; border-radius: 6px; box-sizing: border-box; }
+        button { width: 100%; padding: 0.75rem; background: #e67e22; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; transition: background 0.3s; }
+        button:hover { background: #d35400; }
+        button:disabled { background: #bdc3c7; }
+        #msg { color: #c0392b; text-align: center; font-size: 0.9rem; margin-top: 1rem; height: 20px; }
     </style>
 </head>
 <body>
     <div class="login-card">
-        <h2>Karni Fashion Login</h2>
+        <h2>Rajratan Login</h2>
         <input type="text" id="user" placeholder="Username">
         <input type="password" id="pass" placeholder="Password">
-        <button id="loginBtn" onclick="doLogin()">Login</button>
+        <button id="loginBtn" onclick="doLogin()">Sign In</button>
         <p id="msg"></p>
     </div>
 
@@ -39,17 +40,16 @@
                     body: JSON.stringify({ username: userField.value, password: passField.value })
                 });
 
-                const data = await res.json();
-
-                if (data.success) {
-                    // Redirect to the dashboard on success
-                    window.location.href = '/dashboard';
+                if (res.status === 200) {
+                    const data = await res.json();
+                    alert('Welcome back, ' + userField.value + '! Role: ' + data.role);
+                    // Next step: window.location.href = '/dashboard';
                 } else {
-                    msg.innerText = 'Invalid username or password';
+                    msg.innerText = 'Invalid credentials. Please try again.';
                     btn.disabled = false;
                 }
             } catch (err) {
-                msg.innerText = 'Error connecting to server';
+                msg.innerText = 'Connection error. Check your internet.';
                 btn.disabled = false;
             }
         }
