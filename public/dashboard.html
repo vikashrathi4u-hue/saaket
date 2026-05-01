@@ -14,7 +14,6 @@
         .main-content { flex-grow: 1; padding: 40px; overflow-y: auto; }
         .card { background: white; padding: 25px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); }
         
-        /* Filter Styling */
         .filter-grid { display: grid; gap: 20px; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); margin-bottom: 20px; }
         .checkbox-container { border: 1px solid #ddd; border-radius: 4px; height: 150px; overflow-y: auto; padding: 10px; background: #fff; }
         .checkbox-item { display: flex; align-items: center; margin-bottom: 5px; font-size: 0.9rem; }
@@ -27,14 +26,13 @@
         .reset-btn { background: #95a5a6; color: white; border: none; padding: 12px 24px; cursor: pointer; border-radius: 4px; font-weight: bold; }
         .action-btn:disabled { background: #bdc3c7; }
 
-        /* Table & Sorting */
         table { width: 100%; border-collapse: collapse; margin-top: 10px; background: white; }
         th { background: #2c3e50; color: white; text-align: left; padding: 12px; border: 1px solid #ddd; white-space: nowrap; }
-        th.sortable { cursor: pointer; transition: 0.2s; position: relative; padding-right: 25px; }
+        th.sortable { cursor: pointer; position: relative; padding-right: 25px; }
         th.sortable:hover { background: #34495e; }
         td { padding: 10px; border: 1px solid #ddd; font-size: 0.95rem; }
         tr:nth-child(even) { background: #f9f9f9; }
-        .sort-icon { position: absolute; right: 8px; opacity: 0.5; font-size: 0.8rem; }
+        .sort-icon { position: absolute; right: 8px; opacity: 0.6; }
         
         .pag-btn { background: #ecf0f1; border: 1px solid #bdc3c7; padding: 5px 15px; cursor: pointer; border-radius: 4px; margin-left: 5px; }
         .pag-btn:disabled { opacity: 0.5; cursor: not-allowed; }
@@ -59,15 +57,9 @@
     </div>
 
     <script>
-        let allItems = [];
-        let allBrands = [];
-        let reportData = [];
-        let currentPage = 1;
-        const rowsPerPage = 50;
-        
-        // Sorting State
-        let currentSortCol = '';
-        let isAsc = false;
+        let allItems = [], allBrands = [], reportData = [];
+        let currentPage = 1, rowsPerPage = 50;
+        let currentSortCol = '', isAsc = false;
 
         async function showPage(page, btn) {
             const title = document.getElementById('page-title');
@@ -100,7 +92,6 @@
                         <button class="action-btn" id="genBtn" onclick="generateReport()">Generate Report</button>
                         <button class="reset-btn" onclick="resetFilters()">Reset Filters</button>
                     </div>
-                    
                     <div id="reportHeader" style="margin-top: 25px; display: none; justify-content: space-between; align-items: center;">
                         <h3 style="color: #2c3e50; border-bottom: 2px solid #e67e22; padding-bottom: 5px; margin: 0;">
                             Unique Customers: <span id="customerCount">0</span>
@@ -175,7 +166,6 @@
             fetchFilterData();
             document.getElementById('reportHeader').style.display = 'none';
             document.getElementById('reportResult').innerHTML = '';
-            reportData = [];
         }
 
         async function generateReport() {
@@ -190,7 +180,7 @@
             const end = document.getElementById('endDate').value;
 
             btn.disabled = true;
-            resDiv.innerHTML = "<i>Calculating totals and generating report...</i>";
+            resDiv.innerHTML = "<i>Calculating sales data...</i>";
             
             try {
                 const response = await fetch('/get_report', {
@@ -206,7 +196,7 @@
                     currentPage = 1;
                     renderTablePage(1);
                 } else {
-                    resDiv.innerText = "No records found for the selected criteria.";
+                    resDiv.innerText = "No records found.";
                     headerDiv.style.display = "none";
                 }
             } catch (err) {
@@ -215,24 +205,14 @@
         }
 
         function sortData(column) {
-            if (currentSortCol === column) {
-                isAsc = !isAsc;
-            } else {
-                currentSortCol = column;
-                isAsc = false; // Default to High -> Low for sales
-            }
+            if (currentSortCol === column) isAsc = !isAsc;
+            else { currentSortCol = column; isAsc = false; }
 
             reportData.sort((a, b) => {
-                let valA = a[column];
-                let valB = b[column];
-                
-                if (typeof valA === 'string') {
-                    return isAsc ? valA.localeCompare(valB) : valB.localeCompare(valA);
-                } else {
-                    return isAsc ? valA - valB : valB - valA;
-                }
+                let valA = a[column], valB = b[column];
+                if (typeof valA === 'string') return isAsc ? valA.localeCompare(valB) : valB.localeCompare(valA);
+                return isAsc ? valA - valB : valB - valA;
             });
-
             renderTablePage(1);
         }
 
@@ -247,32 +227,24 @@
                 return isAsc ? '<span class="sort-icon">🔼</span>' : '<span class="sort-icon">🔽</span>';
             };
 
-            let html = `
-                <table>
-                    <thead>
-                        <tr>
-                            <th style="width: 60px;">Sr</th>
-                            <th class="sortable" onclick="sortData('name')">Customer Name ${getIcon('name')}</th>
-                            <th style="width: 140px;">Mobile Number</th>
-                            <th class="sortable" onclick="sortData('totalSale')">Total Sale ${getIcon('totalSale')}</th>
-                            <th class="sortable" onclick="sortData('itemSale')">Item Sale ${getIcon('itemSale')}</th>
-                            <th class="sortable" onclick="sortData('brandSale')">Brand Sale ${getIcon('brandSale')}</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-            `;
+            let html = `<table><thead><tr>
+                <th>Sr</th>
+                <th class="sortable" onclick="sortData('name')">Name ${getIcon('name')}</th>
+                <th>Mobile</th>
+                <th class="sortable" onclick="sortData('totalSale')">Total Sale ${getIcon('totalSale')}</th>
+                <th class="sortable" onclick="sortData('itemSale')">Item Sale ${getIcon('itemSale')}</th>
+                <th class="sortable" onclick="sortData('brandSale')">Brand Sale ${getIcon('brandSale')}</th>
+            </tr></thead><tbody>`;
 
-            pageData.forEach((row, index) => {
-                html += `
-                    <tr>
-                        <td>${start + index + 1}</td>
-                        <td>${row.name || 'N/A'}</td>
-                        <td>${row.mobile}</td>
-                        <td style="font-weight:bold">₹${row.totalSale.toLocaleString('en-IN')}</td>
-                        <td style="color:#2980b9">₹${row.itemSale.toLocaleString('en-IN')}</td>
-                        <td style="color:#27ae60">₹${row.brandSale.toLocaleString('en-IN')}</td>
-                    </tr>
-                `;
+            pageData.forEach((row, i) => {
+                html += `<tr>
+                    <td>${start + i + 1}</td>
+                    <td>${row.name}</td>
+                    <td>${row.mobile}</td>
+                    <td style="font-weight:bold">₹${row.totalSale.toLocaleString('en-IN')}</td>
+                    <td style="color:#2980b9">₹${row.itemSale.toLocaleString('en-IN')}</td>
+                    <td style="color:#27ae60">₹${row.brandSale.toLocaleString('en-IN')}</td>
+                </tr>`;
             });
 
             html += `</tbody></table>`;
@@ -280,9 +252,9 @@
 
             const totalPages = Math.ceil(reportData.length / rowsPerPage);
             pagDiv.innerHTML = totalPages > 1 ? `
-                <button class="pag-btn" onclick="changePage(${page - 1})" ${page === 1 ? 'disabled' : ''}>Prev</button>
-                <span style="margin: 0 10px; font-weight: bold;">Page ${page} of ${totalPages}</span>
-                <button class="pag-btn" onclick="changePage(${page + 1})" ${page === totalPages ? 'disabled' : ''}>Next</button>
+                <button class="pag-btn" onclick="changePage(${page-1})" ${page===1?'disabled':''}>Prev</button>
+                <span style="margin:0 10px;font-weight:bold">Page ${page} of ${totalPages}</span>
+                <button class="pag-btn" onclick="changePage(${page+1})" ${page===totalPages?'disabled':''}>Next</button>
             ` : '';
         }
 
