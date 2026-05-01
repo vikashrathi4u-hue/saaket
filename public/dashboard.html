@@ -6,28 +6,29 @@
     <style>
         * { box-sizing: border-box; }
         body { font-family: 'Segoe UI', sans-serif; margin: 0; display: flex; height: 100vh; background: #f4f7f6; }
-        
-        /* Sidebar Styling */
         .sidebar { width: 250px; background: #2c3e50; color: white; display: flex; flex-direction: column; padding: 20px; flex-shrink: 0; }
         .sidebar h2 { font-size: 1.2rem; margin-bottom: 2rem; border-bottom: 1px solid #34495e; padding-bottom: 10px; color: #e67e22; }
         .nav-btn { background: none; border: none; color: #bdc3c7; text-align: left; padding: 12px; font-size: 1rem; cursor: pointer; border-radius: 4px; margin-bottom: 5px; transition: 0.3s; width: 100%; }
         .nav-btn:hover { background: #34495e; color: white; }
         .active { background: #e67e22 !important; color: white; }
-
-        /* Main Content Styling */
         .main-content { flex-grow: 1; padding: 40px; overflow-y: auto; }
-        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; }
         .card { background: white; padding: 25px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); }
-        h1 { margin: 0; color: #2c3e50; }
-
-        /* Form & Filter Styling */
         .filter-grid { display: grid; gap: 20px; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); margin-bottom: 20px; }
         label { display: block; margin-bottom: 8px; font-weight: bold; color: #34495e; }
         select, input { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px; }
         select[multiple] { height: 120px; }
         .action-btn { background: #e67e22; color: white; border: none; padding: 12px 24px; cursor: pointer; border-radius: 4px; font-weight: bold; }
         .action-btn:disabled { background: #bdc3c7; }
-        #reportResult { margin-top: 20px; padding: 15px; background: #f9f9f9; border: 1px solid #eee; border-radius: 4px; white-space: pre-wrap; }
+        
+        /* Table Styling */
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; background: white; }
+        th { background: #2c3e50; color: white; text-align: left; padding: 12px; border: 1px solid #ddd; }
+        td { padding: 10px; border: 1px solid #ddd; }
+        tr:nth-child(even) { background: #f9f9f9; }
+
+        /* Pagination Styling */
+        .pag-btn { background: #ecf0f1; border: 1px solid #bdc3c7; padding: 5px 15px; cursor: pointer; border-radius: 4px; margin-left: 5px; }
+        .pag-btn:disabled { cursor: not-allowed; opacity: 0.5; }
     </style>
 </head>
 <body>
@@ -43,41 +44,31 @@
     </div>
 
     <div class="main-content">
-        <div class="header">
-            <h1 id="page-title">Dashboard</h1>
-        </div>
-        
+        <h1 id="page-title" style="margin-bottom: 30px; color: #2c3e50;">Dashboard</h1>
         <div class="card" id="content-area">
             <p>Select an option from the sidebar to get started.</p>
         </div>
     </div>
 
     <script>
-        // Global variables to store raw data for cascading filters
         let allItems = [];
         let allBrands = [];
+        let reportData = []; 
+        let currentPage = 1;
+        const rowsPerPage = 50;
 
         async function showPage(page, btn) {
             const title = document.getElementById('page-title');
             const content = document.getElementById('content-area');
-            
             document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
             btn.classList.add('active');
 
-            if (page === 'addUser') {
-                title.innerText = "Manage Users";
-                content.innerHTML = "<h3>Add New Access</h3><p>User creation form coming soon...</p>";
-            } 
-            else if (page === 'addData') {
-                title.innerText = "Entry Management";
-                content.innerHTML = "<h3>New Data Entry</h3><p>Data entry form coming soon...</p>";
-            } 
-            else if (page === 'viewReport') {
+            if (page === 'viewReport') {
                 title.innerText = "Rajratan Sales Reports";
                 content.innerHTML = `
                     <div class="filter-grid">
                         <div>
-                            <label>Item Names (Multi-select)</label>
+                            <label>Item Names</label>
                             <select id="itemSelect" multiple onchange="applyCascadingFilter('item')">
                                 <option>Loading...</option>
                             </select>
@@ -97,48 +88,50 @@
                             <input type="date" id="endDate">
                         </div>
                     </div>
-                    <button class="action-btn" id="genBtn" onclick="generateReport()">Generate Mobile List</button>
-                    <div id="reportResult">Select filters and click generate...</div>
+                    <button class="action-btn" id="genBtn" onclick="generateReport()">Generate Report</button>
+                    
+                    <div id="reportHeader" style="margin-top: 25px; display: none; justify-content: space-between; align-items: center;">
+                        <h3 style="color: #2c3e50; border-bottom: 2px solid #e67e22; padding-bottom: 5px; margin: 0;">
+                            Unique Customers: <span id="customerCount">0</span>
+                        </h3>
+                        <div id="paginationControls"></div>
+                    </div>
+                    
+                    <div id="reportResult" style="margin-top: 10px;"></div>
                 `;
                 fetchFilterData();
+            } else {
+                title.innerText = "Section Coming Soon";
+                content.innerHTML = "<p>This module is currently under development.</p>";
             }
         }
 
-        // Fetch unique Items and Brands for initial dropdowns
         async function fetchFilterData() {
             try {
-                const res = await fetch('/get_filter_options'); // You'll need this function file next
+                const res = await fetch('/get_filter_options');
                 const data = await res.json();
-                allItems = data.items; // e.g., ["PALAZZO SET", "KURTI"]
-                allBrands = data.brands; // e.g., ["SHREE RAM ENTERPRISES"]
-                
+                allItems = data.items;
+                allBrands = data.brands;
                 populateDropdown('itemSelect', allItems);
                 populateDropdown('brandSelect', allBrands, true);
-            } catch (e) {
-                console.error("Filter fetch failed", e);
-            }
+            } catch (e) { console.error("Filter fetch failed", e); }
         }
 
         function populateDropdown(id, list, hasDefault = false) {
             const el = document.getElementById(id);
             let html = hasDefault ? '<option value="">-- All Brands --</option>' : '';
-            list.forEach(item => {
-                html += `<option value="${item}">${item}</option>`;
-            });
+            list.forEach(item => { html += `<option value="${item}">${item}</option>`; });
             el.innerHTML = html;
         }
 
-        // The logic you requested: cascading filters
         async function applyCascadingFilter(source) {
             const selectedItems = Array.from(document.getElementById('itemSelect').selectedOptions).map(o => o.value);
             const selectedBrand = document.getElementById('brandSelect').value;
-
             const res = await fetch('/filter_cascade', {
                 method: 'POST',
                 body: JSON.stringify({ items: selectedItems, brand: selectedBrand, source })
             });
             const filtered = await res.json();
-
             if (source === 'item' && selectedItems.length > 0) {
                 populateDropdown('brandSelect', filtered.brands, true);
             } else if (source === 'brand' && selectedBrand !== "") {
@@ -149,13 +142,17 @@
         async function generateReport() {
             const btn = document.getElementById('genBtn');
             const resDiv = document.getElementById('reportResult');
+            const headerDiv = document.getElementById('reportHeader');
+            const countSpan = document.getElementById('customerCount');
+            
             const items = Array.from(document.getElementById('itemSelect').selectedOptions).map(o => o.value);
             const brand = document.getElementById('brandSelect').value;
             const start = document.getElementById('startDate').value;
             const end = document.getElementById('endDate').value;
 
             btn.disabled = true;
-            resDiv.innerText = "Processing sales history...";
+            resDiv.innerHTML = "<i>Processing unique records...</i>";
+            headerDiv.style.display = "none";
 
             try {
                 const response = await fetch('/get_report', {
@@ -163,18 +160,68 @@
                     headers: {'Content-Type': 'application/json'},
                     body: JSON.stringify({ items, brand, startDate: start, endDate: end })
                 });
-                const mobiles = await response.json();
+                reportData = await response.json(); 
                 
-                if (mobiles.length > 0) {
-                    resDiv.innerHTML = `<strong>Found ${mobiles.length} unique customers:</strong>\n\n` + mobiles.join(', ');
+                if (reportData.length > 0) {
+                    headerDiv.style.display = "flex";
+                    countSpan.innerText = reportData.length;
+                    currentPage = 1;
+                    renderTablePage(1);
                 } else {
-                    resDiv.innerText = "No unique mobile numbers found for this criteria.";
+                    resDiv.innerText = "No unique customers found.";
                 }
             } catch (err) {
                 resDiv.innerText = "Error generating report.";
-            } finally {
-                btn.disabled = false;
+            } finally { btn.disabled = false; }
+        }
+
+        function renderTablePage(page) {
+            const resDiv = document.getElementById('reportResult');
+            const pagDiv = document.getElementById('paginationControls');
+            
+            const start = (page - 1) * rowsPerPage;
+            const end = start + rowsPerPage;
+            const pageData = reportData.slice(start, end);
+
+            let html = `
+                <table>
+                    <thead>
+                        <tr>
+                            <th style="width: 80px;">Sr. No</th>
+                            <th>Customer Name & Mobile Number</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+            `;
+
+            pageData.forEach((customer, index) => {
+                html += `
+                    <tr>
+                        <td>${start + index + 1}</td>
+                        <td>${customer}</td>
+                    </tr>
+                `;
+            });
+
+            html += `</tbody></table>`;
+            resDiv.innerHTML = html;
+
+            const totalPages = Math.ceil(reportData.length / rowsPerPage);
+            let pagHtml = '';
+            if (totalPages > 1) {
+                pagHtml = `
+                    <button class="pag-btn" onclick="changePage(${page - 1})" ${page === 1 ? 'disabled' : ''}>Prev</button>
+                    <span style="margin: 0 10px; font-weight: bold;">Page ${page} of ${totalPages}</span>
+                    <button class="pag-btn" onclick="changePage(${page + 1})" ${page === totalPages ? 'disabled' : ''}>Next</button>
+                `;
             }
+            pagDiv.innerHTML = pagHtml;
+        }
+
+        function changePage(newPage) {
+            currentPage = newPage;
+            renderTablePage(currentPage);
+            document.querySelector('.main-content').scrollTop = 0;
         }
     </script>
 </body>
