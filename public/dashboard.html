@@ -364,16 +364,31 @@ let allCommData = [];
         const commRows = 50;
 
         async function loadCommLogs() {
-            try {
-                // Change: Fetch from the master customer list, not just notes
-                const res = await fetch('/get_customer_master'); 
-                allCommData = await res.json();
-                filteredCommData = [...allCommData];
-                renderCommTable(1);
-            } catch (e) {
-                document.getElementById('logResult').innerHTML = "Error loading master list.";
-            }
+    const logResult = document.getElementById('logResult');
+    try {
+        const res = await fetch('/get_customer_master');
+        if (!res.ok) throw new Error("Endpoint not found");
+        
+        allCommData = await res.json();
+        filteredCommData = [...allCommData];
+        renderCommTable(1);
+    } catch (e) {
+        console.warn("Falling back to reportData:", e.message);
+        
+        // Use the sales report data as the master list
+        if (reportData && reportData.length > 0) {
+            allCommData = [...reportData];
+            filteredCommData = [...allCommData];
+            renderCommTable(1);
+        } else {
+            logResult.innerHTML = `
+                <div style="padding: 20px; color: #7f8c8d; text-align: center;">
+                    <p><b>Master list not available.</b></p>
+                    <p>Please go to <b>View Report</b> and click <b>Generate Report</b> first to load customers into this list.</p>
+                </div>`;
         }
+    }
+}
 
         function filterCommLogs() {
             const term = document.getElementById('commSearch').value.toLowerCase();
