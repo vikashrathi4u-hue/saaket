@@ -70,70 +70,80 @@
         let currentSortCol = '', isAsc = false;
 
 async function showPage(page, btn) {
-            const title = document.getElementById('page-title');
-            const content = document.getElementById('content-area');
-            document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
-            if (btn) btn.classList.add('active');
+    const title = document.getElementById('page-title');
+    const content = document.getElementById('content-area');
+    
+    // Manage active button state
+    document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+    if (btn) btn.classList.add('active');
 
-            if (page === 'viewReport') {
-                title.innerText = "Rajratan Sales Reports";
-                content.innerHTML = `
-                    <div class="filter-grid">
-                        <div>
-                            <label>Item Names</label>
-                            <div id="itemCheckboxes" class="checkbox-container">Loading...</div>
-                        </div>
-                        <div>
-                            <label>Brand Names</label>
-                            <div id="brandCheckboxes" class="checkbox-container">Loading...</div>
-                        </div>
-                        <div>
-                            <label>Start Date</label>
-                            <input type="date" id="startDate">
-                        </div>
-                        <div>
-                            <label>End Date</label>
-                            <input type="date" id="endDate">
-                        </div>
-                    </div>
-                    <div class="btn-group">
-                        <button class="action-btn" id="genBtn" onclick="generateReport()">Generate Report</button>
-                        <button class="download-btn" id="dlBtn" onclick="downloadExcel()">Download Excel</button>
-                        <button class="reset-btn" onclick="resetFilters()">Reset Filters</button>
-                    </div>
-                    <div id="reportHeader" style="margin-top: 25px; display: none; justify-content: space-between; align-items: center;">
-                        <h3 style="color: #2c3e50; border-bottom: 2px solid #e67e22; padding-bottom: 5px; margin: 0;">
-                            Unique Customers: <span id="customerCount">0</span>
-                        </h3>
-                        <div id="paginationControls"></div>
-                    </div>
-                    <div id="reportResult" style="margin-top: 10px;"></div>
-                `;
-                fetchFilterData();
-            } 
-            else if (page === 'commLogs') {
-                title.innerText = "Communication History";
-                content.innerHTML = `
-                    <div style="margin-bottom: 20px; display: flex; gap: 10px;">
-                        <input type="text" id="commSearch" placeholder="Search mobile or name..." 
-                            style="padding: 10px; width: 300px; border: 1px solid #ddd; border-radius: 4px;"
-                            onkeyup="filterCommLogs()">
-                    </div>
-                    <div id="commHeader" style="margin-bottom: 10px; display: flex; justify-content: space-between;">
-                        <span id="commCount" style="font-weight: bold; color: #2c3e50;"></span>
-                        <div id="commPagination"></div>
-                    </div>
-                    <div id="logResult">
-                        <p style="color: #7f8c8d;">Fetching communication records...</p>
-                    </div>
-                `;
-                loadCommLogs();
-            }
-            else {
-                title.innerText = "Section Coming Soon";
-                content.innerHTML = "<p>This module is currently under development.</p>";
-            }
+    if (page === 'viewReport') {
+        title.innerText = "Rajratan Sales Reports";
+        content.innerHTML = `
+            <div class="filter-grid">
+                <div>
+                    <label>Item Names</label>
+                    <div id="itemCheckboxes" class="checkbox-container">Loading...</div>
+                </div>
+                <div>
+                    <label>Brand Names</label>
+                    <div id="brandCheckboxes" class="checkbox-container">Loading...</div>
+                </div>
+                <div>
+                    <label>Start Date</label>
+                    <input type="date" id="startDate">
+                </div>
+                <div>
+                    <label>End Date</label>
+                    <input type="date" id="endDate">
+                </div>
+            </div>
+            <div class="btn-group">
+                <button class="action-btn" id="genBtn" onclick="generateReport()">Generate Report</button>
+                <button class="download-btn" id="dlBtn" onclick="downloadExcel()">Download Excel</button>
+                <button class="reset-btn" onclick="resetFilters()">Reset Filters</button>
+            </div>
+            <div id="reportHeader" style="margin-top: 25px; display: none; justify-content: space-between; align-items: center;">
+                <h3 style="color: #2c3e50; border-bottom: 2px solid #e67e22; padding-bottom: 5px; margin: 0;">
+                    Unique Customers: <span id="customerCount">0</span>
+                </h3>
+                <div id="paginationControls"></div>
+            </div>
+            <div id="reportResult" style="margin-top: 10px;"></div>
+        `;
+        fetchFilterData();
+    } 
+    else if (page === 'commLogs') {
+        title.innerText = "Communication History";
+        content.innerHTML = `
+            <div style="margin-bottom: 20px; display: flex; gap: 10px;">
+                <input type="text" id="commSearch" placeholder="Search mobile or name..." 
+                    style="padding: 10px; width: 300px; border: 1px solid #ddd; border-radius: 4px;"
+                    onkeyup="filterCommLogs()">
+            </div>
+            <div id="commHeader" style="margin-bottom: 10px; display: flex; justify-content: space-between;">
+                <span id="commCount" style="font-weight: bold; color: #2c3e50;"></span>
+                <div id="commPagination"></div>
+            </div>
+            <div id="logResult">
+                <p style="color: #7f8c8d;">Loading data...</p>
+            </div>
+        `;
+        
+        // Fix: Use reportData as a backup if the direct fetch hasn't happened
+        if (reportData && reportData.length > 0) {
+            allCommData = [...reportData];
+            filteredCommData = [...allCommData];
+            renderCommTable(1);
+        } else {
+            loadCommLogs(); // Attempt to fetch from database
         }
+    } 
+    else {
+        title.innerText = "Section Coming Soon";
+        content.innerHTML = "<p>This module is currently under development.</p>";
+    }
+}
 
         async function fetchFilterData() {
             try {
@@ -355,13 +365,13 @@ let allCommData = [];
 
         async function loadCommLogs() {
             try {
-                // This assumes you have a /get_comm_logs endpoint in your worker
-                const res = await fetch('/get_comm_logs');
+                // Change: Fetch from the master customer list, not just notes
+                const res = await fetch('/get_customer_master'); 
                 allCommData = await res.json();
                 filteredCommData = [...allCommData];
                 renderCommTable(1);
             } catch (e) {
-                document.getElementById('logResult').innerHTML = "Error loading logs.";
+                document.getElementById('logResult').innerHTML = "Error loading master list.";
             }
         }
 
