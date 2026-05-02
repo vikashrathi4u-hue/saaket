@@ -4,14 +4,12 @@
     <meta charset="UTF-8">
     <title>Rajratan Login</title>
     <style>
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; background: #2c3e50; margin: 0; }
-        .login-card { background: white; padding: 2.5rem; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.2); width: 320px; }
-        h2 { text-align: center; color: #1a252f; margin-bottom: 1.5rem; }
-        input { display: block; width: 100%; margin-bottom: 1.2rem; padding: 0.7rem; border: 1px solid #ddd; border-radius: 6px; box-sizing: border-box; }
-        button { width: 100%; padding: 0.75rem; background: #e67e22; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; transition: background 0.3s; }
-        button:hover { background: #d35400; }
-        button:disabled { background: #bdc3c7; }
-        #msg { color: #c0392b; text-align: center; font-size: 0.9rem; margin-top: 1rem; height: 20px; }
+        body { font-family: 'Segoe UI', sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; background: #2c3e50; margin: 0; }
+        .login-card { background: white; padding: 2.5rem; border-radius: 12px; width: 320px; box-shadow: 0 4px 20px rgba(0,0,0,0.2); }
+        h2 { text-align: center; color: #1a252f; }
+        input { display: block; width: 100%; margin-bottom: 1.2rem; padding: 0.7rem; border: 1px solid #ddd; border-radius: 6px; }
+        button { width: 100%; padding: 0.75rem; background: #e67e22; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; }
+        #msg { color: #c0392b; text-align: center; font-size: 0.9rem; margin-top: 1rem; }
     </style>
 </head>
 <body>
@@ -25,32 +23,24 @@
 
     <script>
         async function doLogin() {
-            const userField = document.getElementById('user');
-            const passField = document.getElementById('pass');
+            const user = document.getElementById('user').value;
+            const pass = document.getElementById('pass').value;
             const msg = document.getElementById('msg');
-            const btn = document.getElementById('loginBtn');
-
-            msg.innerText = '';
-            btn.disabled = true;
 
             try {
-                const res = await fetch('/login', {
+                const res = await fetch('/login_3', { // Aligned with your worker name[cite: 8]
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ username: userField.value, password: passField.value })
+                    body: JSON.stringify({ username: user, password: pass })
                 });
 
-                if (res.status === 200) {
-                    const data = await res.json();
-                    alert('Welcome back, ' + userField.value + '! Role: ' + data.role);
-                    window.location.href = '/dashboard';
+                if (res.ok) {
+                    window.location.href = '/dashboard_7.html'; // Redirect to your dashboard
                 } else {
-                    msg.innerText = 'Invalid credentials. Please try again.';
-                    btn.disabled = false;
+                    msg.innerText = 'Invalid credentials.';
                 }
             } catch (err) {
-                msg.innerText = 'Connection error. Check your internet.';
-                btn.disabled = false;
+                msg.innerText = 'Connection error.';
             }
         }
     </script>
