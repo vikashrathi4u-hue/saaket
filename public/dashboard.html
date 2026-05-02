@@ -51,6 +51,7 @@
         <button class="nav-btn" onclick="showPage('addUser', this)">Add User</button>
         <button class="nav-btn" onclick="showPage('addData', this)">Add Data</button>
         <button class="nav-btn" onclick="showPage('viewReport', this)">View Report</button>
+	<button class="nav-btn" onclick="showPage('commLogs', this)">Communication</button>
         <div style="margin-top: auto;">
             <button class="nav-btn" onclick="location.href='/'">Logout</button>
         </div>
@@ -68,11 +69,11 @@
         let currentPage = 1, rowsPerPage = 50;
         let currentSortCol = '', isAsc = false;
 
-        async function showPage(page, btn) {
+async function showPage(page, btn) {
             const title = document.getElementById('page-title');
             const content = document.getElementById('content-area');
             document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
-            btn.classList.add('active');
+            if (btn) btn.classList.add('active');
 
             if (page === 'viewReport') {
                 title.innerText = "Rajratan Sales Reports";
@@ -109,7 +110,19 @@
                     <div id="reportResult" style="margin-top: 10px;"></div>
                 `;
                 fetchFilterData();
-            } else {
+            } 
+            else if (page === 'commLogs') {
+                title.innerText = "Communication History";
+                content.innerHTML = `
+                    <div class="card">
+                        <h3>Recent Client Interactions</h3>
+                        <div id="logResult">
+                            <p style="color: #7f8c8d;">Feature loading... Connect your Supabase fetcher to display history here.</p>
+                        </div>
+                    </div>
+                `;
+            }
+            else {
                 title.innerText = "Section Coming Soon";
                 content.innerHTML = "<p>This module is currently under development.</p>";
             }
@@ -244,7 +257,7 @@
             renderTablePage(1);
         }
 
-        function renderTablePage(page) {
+function renderTablePage(page) {
             const resDiv = document.getElementById('reportResult');
             const pagDiv = document.getElementById('paginationControls');
             const start = (page - 1) * rowsPerPage;
@@ -262,10 +275,16 @@
                 <th class="sortable" onclick="sortData('totalSale')">Total Sale ${getIcon('totalSale')}</th>
                 <th class="sortable" onclick="sortData('itemSale')">Item Sale ${getIcon('itemSale')}</th>
                 <th class="sortable" onclick="sortData('brandSale')">Brand Sale ${getIcon('brandSale')}</th>
+                <th>Last Note</th> <!-- New Column -->
                 <th>Action</th>
             </tr></thead><tbody>`;
 
             pageData.forEach((row, i) => {
+                // Formatting the note display
+                const noteDisplay = row.last_note 
+                    ? `<span style="font-size:0.8rem; color:#2c3e50;"><b>${row.last_note_date}:</b> ${row.last_note}</span>` 
+                    : `<span style="color:#bdc3c7; font-size:0.8rem;">No history</span>`;
+
                 html += `<tr>
                     <td>${start + i + 1}</td>
                     <td>${row.name}</td>
@@ -273,6 +292,7 @@
                     <td style="font-weight:bold">₹${row.totalSale.toLocaleString('en-IN')}</td>
                     <td style="color:#2980b9">₹${row.itemSale.toLocaleString('en-IN')}</td>
                     <td style="color:#27ae60">₹${row.brandSale.toLocaleString('en-IN')}</td>
+                    <td>${noteDisplay}</td>
                     <td>
                         <button class="note-btn" onclick="saveCustomerNote('${row.name.replace(/'/g, "\\'")}', '${row.mobile}')">
                             + Note
@@ -291,6 +311,7 @@
                 <button class="pag-btn" onclick="changePage(${page+1})" ${page===totalPages?'disabled':''}>Next</button>
             ` : '';
         }
+
 
         async function saveCustomerNote(name, mobile) {
             const note = prompt(`Enter follow-up note for ${name}:`);
