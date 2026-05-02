@@ -3,10 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <title>Rajratan Management</title>
-    <!-- - External Library for Excel Export -->
+    <!-- External Library for Excel Export -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <style>
-        /* Existing Styles */
         * { box-sizing: border-box; }
         body { font-family: 'Segoe UI', sans-serif; margin: 0; display: flex; height: 100vh; background: #f4f7f6; }
         .sidebar { width: 250px; background: #2c3e50; color: white; display: flex; flex-direction: column; padding: 20px; flex-shrink: 0; }
@@ -26,10 +25,13 @@
         
         .btn-group { display: flex; gap: 10px; margin-bottom: 20px; }
         .action-btn { background: #e67e22; color: white; border: none; padding: 12px 24px; cursor: pointer; border-radius: 4px; font-weight: bold; }
-        /* Green color for download button[cite: 2] */
         .download-btn { background: #27ae60; color: white; border: none; padding: 12px 24px; cursor: pointer; border-radius: 4px; font-weight: bold; display: none; }
         .reset-btn { background: #95a5a6; color: white; border: none; padding: 12px 24px; cursor: pointer; border-radius: 4px; font-weight: bold; }
         .action-btn:disabled { background: #bdc3c7; }
+
+        /* Style for the new Note button */
+        .note-btn { background: #3498db; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 0.85rem; }
+        .note-btn:hover { background: #2980b9; }
 
         table { width: 100%; border-collapse: collapse; margin-top: 10px; background: white; }
         th { background: #2c3e50; color: white; text-align: left; padding: 12px; border: 1px solid #ddd; white-space: nowrap; }
@@ -95,7 +97,6 @@
                     </div>
                     <div class="btn-group">
                         <button class="action-btn" id="genBtn" onclick="generateReport()">Generate Report</button>
-                        <!--[cite: 2] - New Download Button -->
                         <button class="download-btn" id="dlBtn" onclick="downloadExcel()">Download Excel</button>
                         <button class="reset-btn" onclick="resetFilters()">Reset Filters</button>
                     </div>
@@ -173,13 +174,12 @@
             fetchFilterData();
             document.getElementById('reportHeader').style.display = 'none';
             document.getElementById('reportResult').innerHTML = '';
-            //[cite: 2] - Hide download button on reset
             if(document.getElementById('dlBtn')) document.getElementById('dlBtn').style.display = 'none';
         }
 
         async function generateReport() {
             const btn = document.getElementById('genBtn');
-            const dlBtn = document.getElementById('dlBtn'); //[cite: 2]
+            const dlBtn = document.getElementById('dlBtn');
             const resDiv = document.getElementById('reportResult');
             const headerDiv = document.getElementById('reportHeader');
             const countSpan = document.getElementById('customerCount');
@@ -202,25 +202,22 @@
                 
                 if (reportData.length > 0) {
                     headerDiv.style.display = "flex";
-                    dlBtn.style.display = "inline-block"; //[cite: 2] - Show download button
+                    dlBtn.style.display = "inline-block";
                     countSpan.innerText = reportData.length;
                     currentPage = 1;
                     renderTablePage(1);
                 } else {
                     resDiv.innerText = "No records found.";
                     headerDiv.style.display = "none";
-                    dlBtn.style.display = "none"; //[cite: 2]
+                    dlBtn.style.display = "none";
                 }
             } catch (err) {
                 resDiv.innerText = "Error generating report.";
             } finally { btn.disabled = false; }
         }
 
-        //[cite: 2] - Excel Download Logic
         function downloadExcel() {
             if (!reportData || reportData.length === 0) return;
-
-            // Map keys to readable headers[cite: 2, 6]
             const exportData = reportData.map((row, index) => ({
                 "Sr No": index + 1,
                 "Customer Name": row.name,
@@ -229,12 +226,9 @@
                 "Filtered Item Sale": row.itemSale,
                 "Filtered Brand Sale": row.brandSale
             }));
-
             const worksheet = XLSX.utils.json_to_sheet(exportData);
             const workbook = XLSX.utils.book_new();
             XLSX.utils.book_append_sheet(workbook, worksheet, "Sales_Report");
-
-            // Auto-format file name with date
             const date = new Date().toISOString().split('T')[0];
             XLSX.writeFile(workbook, `Rajratan_Report_${date}.xlsx`);
         }
@@ -242,7 +236,6 @@
         function sortData(column) {
             if (currentSortCol === column) isAsc = !isAsc;
             else { currentSortCol = column; isAsc = false; }
-
             reportData.sort((a, b) => {
                 let valA = a[column], valB = b[column];
                 if (typeof valA === 'string') return isAsc ? valA.localeCompare(valB) : valB.localeCompare(valA);
@@ -269,6 +262,7 @@
                 <th class="sortable" onclick="sortData('totalSale')">Total Sale ${getIcon('totalSale')}</th>
                 <th class="sortable" onclick="sortData('itemSale')">Item Sale ${getIcon('itemSale')}</th>
                 <th class="sortable" onclick="sortData('brandSale')">Brand Sale ${getIcon('brandSale')}</th>
+                <th>Action</th>
             </tr></thead><tbody>`;
 
             pageData.forEach((row, i) => {
@@ -279,6 +273,11 @@
                     <td style="font-weight:bold">₹${row.totalSale.toLocaleString('en-IN')}</td>
                     <td style="color:#2980b9">₹${row.itemSale.toLocaleString('en-IN')}</td>
                     <td style="color:#27ae60">₹${row.brandSale.toLocaleString('en-IN')}</td>
+                    <td>
+                        <button class="note-btn" onclick="saveCustomerNote('${row.name.replace(/'/g, "\\'")}', '${row.mobile}')">
+                            + Note
+                        </button>
+                    </td>
                 </tr>`;
             });
 
@@ -291,6 +290,29 @@
                 <span style="margin:0 10px;font-weight:bold">Page ${page} of ${totalPages}</span>
                 <button class="pag-btn" onclick="changePage(${page+1})" ${page===totalPages?'disabled':''}>Next</button>
             ` : '';
+        }
+
+        async function saveCustomerNote(name, mobile) {
+            const note = prompt(`Enter follow-up note for ${name}:`);
+            if (!note || note.trim() === "") return;
+
+            try {
+                const response = await fetch('/save_note', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name, mobile, note })
+                });
+
+                const result = await response.json();
+                if (result.success) {
+                    alert("Note saved successfully!");
+                } else {
+                    alert("Error saving note: " + result.error);
+                }
+            } catch (err) {
+                console.error("Save note failed", err);
+                alert("Could not connect to server.");
+            }
         }
 
         function changePage(newPage) {
