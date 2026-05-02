@@ -114,13 +114,20 @@ async function showPage(page, btn) {
             else if (page === 'commLogs') {
                 title.innerText = "Communication History";
                 content.innerHTML = `
-                    <div class="card">
-                        <h3>Recent Client Interactions</h3>
-                        <div id="logResult">
-                            <p style="color: #7f8c8d;">Feature loading... Connect your Supabase fetcher to display history here.</p>
-                        </div>
+                    <div style="margin-bottom: 20px; display: flex; gap: 10px;">
+                        <input type="text" id="commSearch" placeholder="Search mobile or name..." 
+                            style="padding: 10px; width: 300px; border: 1px solid #ddd; border-radius: 4px;"
+                            onkeyup="filterCommLogs()">
+                    </div>
+                    <div id="commHeader" style="margin-bottom: 10px; display: flex; justify-content: space-between;">
+                        <span id="commCount" style="font-weight: bold; color: #2c3e50;"></span>
+                        <div id="commPagination"></div>
+                    </div>
+                    <div id="logResult">
+                        <p style="color: #7f8c8d;">Fetching communication records...</p>
                     </div>
                 `;
+                loadCommLogs();
             }
             else {
                 title.innerText = "Section Coming Soon";
@@ -340,6 +347,100 @@ function renderTablePage(page) {
             currentPage = newPage;
             renderTablePage(currentPage);
             document.querySelector('.main-content').scrollTop = 0;
+        }
+let allCommData = [];
+        let filteredCommData = [];
+        let commPage = 1;
+        const commRows = 50;
+
+        async function loadCommLogs() {
+            try {
+                // This assumes you have a /get_comm_logs endpoint in your worker
+                const res = await fetch('/get_comm_logs');
+                allCommData = await res.json();
+                filteredCommData = [...allCommData];
+                renderCommTable(1);
+            } catch (e) {
+                document.getElementById('logResult').innerHTML = "Error loading logs.";
+            }
+        }
+
+        function filterCommLogs() {
+            const term = document.getElementById('commSearch').value.toLowerCase();
+            filteredCommData = allCommData.filter(row => 
+                row.name.toLowerCase().includes(term) || 
+                row.mobile.includes(term)
+            );
+            renderCommTable(1);
+        }
+
+        function renderCommTable(page) {
+            commPage = page;
+            const resDiv = document.getElementById('logResult');
+            const pagDiv = document.getElementById('commPagination');
+            const countSpan = document.getElementById('commCount');
+            
+            const start = (page - 1) * commRows;
+            const data = filteredCommData.slice(start, start + commRows);
+            countSpan.innerText = `Total Records: ${filteredCommData.length}`;
+
+            let html = `<table><thead><tr>
+                <th>Sr</th>
+                <th>Customer Name</th>
+                <th>Mobile</th>
+                <th>Last Communication</th>
+                <th>New Note</th>
+            </tr></thead><tbody>`;
+
+            data.forEach((row, i) => {
+                const lastComm = row.last_note ? `<b>${row.last_note_date}:</b> ${row.last_note}` : "No history";
+                html += `<tr>
+                    <td>${start + i + 1}</td>
+                    <td>${row.name}</td>
+                    <td>${row.mobile}</td>
+                    <td style="font-size: 0.85rem; color: #34495e; max-width: 250px;">${lastComm}</td>
+                    <td>
+                        <div style="display: flex; gap: 5px;">
+                            <input type="text" id="note-${row.mobile}" placeholder="Enter note..." 
+                                style="padding: 5px; border: 1px solid #ddd; border-radius: 3px; flex-grow: 1;">
+                            <button class="note-btn" onclick="submitInlineNote('${row.name}', '${row.mobile}')">Add</button>
+                        </div>
+                    </td>
+                </tr>`;
+            });
+
+            html += `</tbody></table>`;
+            resDiv.innerHTML = html;
+
+            const totalPages = Math.ceil(filteredCommData.length / commRows);
+            pagDiv.innerHTML = totalPages > 1 ? `
+                <button class="pag-btn" onclick="renderCommTable(${page-1})" ${page===1?'disabled':''}>Prev</button>
+                <span style="margin: 0 10px;">${page} / ${totalPages}</span>
+                <button class="pag-btn" onclick="renderCommTable(${page+1})" ${page===totalPages?'disabled':''}>Next</button>
+            ` : '';
+        }
+
+        async function submitInlineNote(name, mobile) {
+            const input = document.getElementById(`note-${mobile}`);
+            const note = input.value.trim();
+            if (!note) return;
+
+            try {
+                const response = await fetch('/save_note', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name, mobile, note })
+                });
+
+                const result = await response.json();
+                if (result.success) {
+                    input.value = ""; // Clear input
+                    alert("Note added!");
+                    loadCommLogs(); // Refresh the list
+                }
+            } catch (err) {
+                alert("Failed to save note.");
+            }
         }
     </script>
 </body>
