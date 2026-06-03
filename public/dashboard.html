@@ -71,7 +71,10 @@
 
     <script>
         let allItems = [], allBrands = [], reportData = [], allCommData = [], filteredCommData = [];
-        let currentPage = 1, rowsPerPage = 50, commPage = 1, commRows = 50;
+let currentPage = 1, rowsPerPage = 50, commPage = 1, commRows = 50;
+
+let sortColumn = '';
+let sortDirection = 'asc';
 
         async function showPage(page, btn) {
             const title = document.getElementById('page-title');
@@ -92,10 +95,10 @@
                         <div><label>End Date</label><input type="date" id="endDate"></div>
                     </div>
                     <div class="btn-group">
-                        <button class="action-btn" id="genBtn" onclick="generateReport()">Generate Report</button>
-                        <button class="download-btn" id="dlBtn" onclick="downloadExcel()">Download Excel</button>
-                        <button class="reset-btn" onclick="resetFilters()">Reset Filters</button>
-                    </div>
+    <button class="action-btn" id="genBtn" onclick="generateReport()">Generate Report</button>
+    <button class="download-btn" id="dlBtn" onclick="downloadExcel()">Download Excel</button>
+    <button class="reset-btn" onclick="resetFilters()">Reset Filters</button>
+</div>
                     <div id="reportHeader" style="margin-top: 25px; display: none; justify-content: space-between; align-items: center;">
                         <h3 style="color: #2c3e50;">Customers Found: <span id="customerCount">0</span></h3>
                     </div>
@@ -137,7 +140,8 @@
             reportData = await res.json();
             document.getElementById('reportHeader').style.display = 'flex';
             document.getElementById('customerCount').innerText = reportData.length;
-            renderTablePage(1);
+document.getElementById('dlBtn').style.display = 'inline-block';
+renderTablePage(1);
         }
 
         function renderTablePage(page) {
@@ -146,7 +150,17 @@
             
             let html = `<table><thead><tr>
                 <th><input type="checkbox" id="selectAll" onclick="toggleAll(this)"></th>
-                <th>Name</th><th>Mobile</th><th>Total Sale</th><th>Action</th>
+                <th onclick="sortTable('name')" style="cursor:pointer">
+Name ${getArrow('name')}
+</th>
+
+<th onclick="sortTable('mobile')" style="cursor:pointer">
+Mobile ${getArrow('mobile')}
+</th>
+
+<th onclick="sortTable('totalSale')" style="cursor:pointer">
+Total Sale ${getArrow('totalSale')}
+</th>
             </tr></thead><tbody>`;
             
             data.forEach(row => {
@@ -159,7 +173,47 @@
             });
             document.getElementById('reportResult').innerHTML = html + `</tbody></table>`;
         }
+function sortTable(column) {
 
+    if (sortColumn === column) {
+        sortDirection = sortDirection === 'asc' ? 'desc' : 'asc';
+    } else {
+        sortColumn = column;
+        sortDirection = 'asc';
+    }
+
+    reportData.sort((a,b)=>{
+
+        let x = a[column];
+        let y = b[column];
+
+        if(column === 'totalSale'){
+            x = Number(x);
+            y = Number(y);
+        } else {
+            x = String(x).toLowerCase();
+            y = String(y).toLowerCase();
+        }
+
+        if(sortDirection === 'asc'){
+            return x > y ? 1 : -1;
+        } else {
+            return x < y ? 1 : -1;
+        }
+    });
+
+    renderTablePage(1);
+}
+
+function getArrow(column){
+
+    if(sortColumn !== column)
+        return '↕';
+
+    return sortDirection === 'asc'
+        ? '▲'
+        : '▼';
+}
         // --- Selection Logic ---
 
         function toggleAll(master) {
@@ -260,6 +314,29 @@
             document.getElementById('reportResult').innerHTML = '';
             document.getElementById('reportHeader').style.display = 'none';
         }
+function downloadExcel(){
+
+    const exportData = reportData.map(r => ({
+        Name: r.name,
+        Mobile: r.mobile,
+        TotalSale: r.totalSale
+    }));
+
+    const ws = XLSX.utils.json_to_sheet(exportData);
+
+    const wb = XLSX.utils.book_new();
+
+    XLSX.utils.book_append_sheet(
+        wb,
+        ws,
+        "Customers"
+    );
+
+    XLSX.writeFile(
+        wb,
+        "Customer_Report.xlsx"
+    );
+}
     </script>
 </body>
 </html>
