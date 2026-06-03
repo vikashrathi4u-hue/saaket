@@ -28,14 +28,14 @@
             const msg = document.getElementById('msg');
 
             try {
-                const res = await fetch('/login_3', { // Aligned with your worker name[cite: 8]
+                const res = await fetch('/login', { // Aligned with your worker name[cite: 8]
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ username: user, password: pass })
                 });
 
                 if (res.ok) {
-                    window.location.href = '/dashboard_7.html'; // Redirect to your dashboard
+                    window.location.href = '/dashboard.html'; // Redirect to your dashboard
                 } else {
                     msg.innerText = 'Invalid credentials.';
                 }
