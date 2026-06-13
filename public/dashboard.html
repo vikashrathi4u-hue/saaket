@@ -49,7 +49,8 @@
         <button class="nav-btn" onclick="showPage('addData', this)">Add Data</button>
         <button class="nav-btn" onclick="showPage('viewReport', this)">View Report</button>
         <button class="nav-btn" onclick="showPage('commLogs', this)">Communication</button>
-        <div style="margin-top: auto;">
+	<button class="nav-btn" onclick="showPage('stockMatrix', this)">Stock Optimization</button>        
+<div style="margin-top: auto;">
             <button class="nav-btn" onclick="location.href='/'">Logout</button>
         </div>
     </div>
@@ -113,7 +114,82 @@ let sortDirection = 'asc';
                 `;
                 loadCommLogs();
             }
+/* ==========================================================================
+   RAJRATAN CLOSING STOCK MATRIX MANAGEMENT OPERATIONAL INTERFACE
+   ========================================================================== */
+if (page === 'stockMatrix') {
+    title.innerText = "Stock Matrix & Reordering Optimizer";
+    content.innerHTML = `
+        <div style="background: white; padding: 25px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); margin-bottom: 25px;">
+            <h3 style="margin-top:0; color:#2c3e50;">1. Scope & Operations Pipeline</h3>
+            <div style="display: flex; gap: 20px; align-items: flex-end; flex-wrap: wrap;">
+                <div style="flex: 1; min-width: 180px;">
+                    <label style="display:block; margin-bottom:8px; font-weight:bold; color:#555;">Target Operational Category</label>
+                    <select id="matrixCategory" style="width:100%; padding:10px; border:1px solid #ccc; border-radius:4px; font-size:14px;" onchange="loadMatrixBrandsDropdown(); clearStoreTimestamps();">
+                        <option value="">-- Select Category --</option>
+                        <option value="SALWAR SUIT">SALWAR SUIT</option>
+                        <option value="KURTI">KURTI</option>
+                        <option value="PLAZO SET">PLAZO SET</option>
+                        <option value="LEHENGA">LEHENGA</option>
+                    </select>
+                </div>
+                <div style="flex: 1; min-width: 180px;">
+                    <label style="display:block; margin-bottom:8px; font-weight:bold; color:#555;">Target Brand Scope</label>
+                    <select id="matrixBrand" style="width:100%; padding:10px; border:1px solid #ccc; border-radius:4px; font-size:14px;" onchange="clearStoreTimestamps();">
+                        <option value="">-- Choose Category First --</option>
+                    </select>
+                </div>
+                <div style="flex: 1; min-width: 150px;">
+                    <label style="display:block; margin-bottom:8px; font-weight:bold; color:#555;">Target Store Source</label>
+                    <select id="matrixStore" style="width:100%; padding:10px; border:1px solid #ccc; border-radius:4px; font-size:14px;">
+                        <option value="RRB">RRB (Priority 1 Core)</option>
+                        <option value="VC">VC Store (Priority 2)</option>
+                        <option value="RRC">RRC Store (Priority 3)</option>
+                    </select>
+                </div>
+                <div style="flex: 1; min-width: 220px;">
+                    <label style="display:block; margin-bottom:8px; font-weight:bold; color:#555;">Upload Closing Spreadsheet Export</label>
+                    <input type="file" id="matrixFile" accept=".xlsx, .xls, .csv" style="width:100%; font-size:13px;">
+                </div>
+                <div>
+                    <button class="action-btn" onclick="handleSpreadsheetUploadProcess()" style="background:#e67e22; color:white; border:none; padding:11px 20px; font-weight:bold; border-radius:4px; cursor:pointer;">Ingest & Wipe Old</button>
+                </div>
+            </div>
+            
+            <div id="storeTimestampsBar" style="display: flex; gap: 15px; margin-top: 20px; padding-top: 15px; border-top: 1px dashed #ddd; font-size: 13px;">
+                <div style="padding: 6px 12px; background: #ebf5fb; border-left: 4px solid #2980b9; border-radius: 4px; color: #2c3e50;">
+                    <strong>RRC Last Upload:</strong> <span id="time-RRC">Select Scope...</span>
+                </div>
+                <div style="padding: 6px 12px; background: #f5eeeb; border-left: 4px solid #8e44ad; border-radius: 4px; color: #2c3e50;">
+                    <strong>VC Last Upload:</strong> <span id="time-VC">Select Scope...</span>
+                </div>
+                <div style="padding: 6px 12px; background: #eaf2e8; border-left: 4px solid #27ae60; border-radius: 4px; color: #2c3e50;">
+                    <strong>RRB Last Upload:</strong> <span id="time-RRB">Select Scope...</span>
+                </div>
+            </div>
+            
+            <div id="uploadProgressLogs" style="margin-top:15px; font-size:13px; color:#666; font-style:italic;"></div>
+        </div>
+
+        <div style="background: white; padding: 25px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.05);">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+                <h3 style="margin:0; color:#2c3e50;">2. Multi-Store Size Matrix Grid View</h3>
+                <div style="display:flex; gap:10px; align-items:center;">
+                    <input type="text" id="matrixSearchQuery" placeholder="Search Filter by Cleaned Item ID..." style="padding:8px 12px; border:1px solid #ccc; border-radius:4px; width:220px;" onkeyup="applyClientMatrixSearchFilter()">
+                    <button onclick="fetchActiveMatrixReportFromServer()" style="background:#2c3e50; color:white; border:none; padding:9px 15px; border-radius:4px; font-weight:bold; cursor:pointer;">Generate Summary</button>
+                    <button id="downloadMatrixBtn" onclick="downloadMatrixExcel()" style="background:#27ae60; color:white; border:none; padding:9px 15px; border-radius:4px; font-weight:bold; cursor:pointer; display:none;">Download Matrix Excel</button>
+                </div>
+            </div>
+            
+            <div style="overflow-x: auto; max-width: 100%;">
+                <div id="matrixTableAnchor">Select a Category and load standard matrices data reports to review stock transfers.</div>
+            </div>
+        </div>
+    `;
+    loadMatrixBrandsDropdown();
+}
         }
+
 
         async function fetchFilterData() {
             const res = await fetch('/get_filter_options'); 
@@ -314,6 +390,441 @@ function getArrow(column){
             document.getElementById('reportResult').innerHTML = '';
             document.getElementById('reportHeader').style.display = 'none';
         }
+let currentServerMatrixData = [];
+let currentServerMatrixSizes = [];
+
+// Clean up messy item codes automatically using string patterns
+function cleanItemCodeHeuristics(rawCode) {
+    if (!rawCode) return "";
+    let clean = String(rawCode).toUpperCase().trim();
+    // Strip common store spreadsheet prefixes
+    clean = clean.replace(/^(KF#|KF-|KF|RRC-|VC_|PLAZO SET|SET\s*\d+)/g, "");
+    // Remove symbols, hyphens, hashes, and blank spaces
+    clean = clean.replace(/[#\-_/\s]/g, "");
+    return clean;
+}
+
+// Map store variations to base uniform colors
+function parseStandardizedColorField(rawColor) {
+    if (!rawColor) return "ASSORTED";
+    let text = String(rawColor).toUpperCase().trim();
+    if (text.includes("YELLOW") || text === "LEMON" || text === "L.YELLOW") return "YELLOW";
+    if (text.includes("GREEN") || text === "RAMA" || text === "L.GREEN" || text === "MINT GREEN") return "GREEN";
+    if (text.includes("BLUE") || text === "PEACOCK BLUE" || text === "NAVY") return "BLUE";
+    if (text.includes("PINK") || text === "DEEP PINK") return "PINK";
+    return text; // Fallback string literal retention
+}
+
+// Hardcoded Category to Brand relationship dictionary map for your dropdown
+function loadMatrixBrandsDropdown() {
+    const cat = document.getElementById("matrixCategory")?.value;
+    const brandSelect = document.getElementById("matrixBrand");
+    if (!brandSelect) return;
+
+    brandSelect.innerHTML = "";
+    if (!cat) {
+        brandSelect.innerHTML = `<option value="">-- Choose Category First --</option>`;
+        return;
+    }
+
+    // Explicit structural mappings matching your specific categories
+    let brands = [];
+    if (cat === "SALWAR SUIT") brands = ["RELIANCE", "MOHAN", "GURUJI"];
+    else if (cat === "PLAZO SET") brands = ["SWASTIK", "KARTIK"];
+    else brands = ["GENERIC BRAND", "AASTHA"];
+
+    brandSelect.innerHTML = `<option value="ALL_BRANDS">View All Brands Combined</option>`;
+    brands.forEach(b => {
+        brandSelect.innerHTML += `<option value="${b}">${b}</option>`;
+    });
+}
+
+// Spreadsheet reader parser engine utilizing your locked structural rules
+function handleSpreadsheetUploadProcess() {
+    const category = document.getElementById("matrixCategory").value;
+    const brand = document.getElementById("matrixBrand").value;
+    const storeCode = document.getElementById("matrixStore").value;
+    const fileInput = document.getElementById("matrixFile");
+    const logs = document.getElementById("uploadProgressLogs");
+
+    if (!category || !brand || brand === "ALL_BRANDS") {
+        alert("Please explicitly select a clear Category and matching isolated Brand to run updates.");
+        return;
+    }
+    if (!fileInput.files || fileInput.files.length === 0) {
+        alert("Please attach a valid retail closing spreadsheet file export first.");
+        return;
+    }
+
+    logs.innerText = "Parsing spreadsheet arrays and aligning headers on client background thread...";
+    const file = fileInput.files[0];
+    const reader = new FileReader();
+
+    reader.onload = async function(e) {
+        try {
+            const data = new Uint8Array(e.target.result);
+            const workbook = XLSX.read(data, { type: "array" });
+            const sheetName = workbook.SheetNames[0];
+            const worksheet = workbook.Sheets[sheetName];
+            
+            // Extract file into a uniform raw array of arrays
+            const rawRows = XLSX.utils.sheet_to_json(worksheet, { header: 1, defval: "" });
+            if (rawRows.length < 2) throw new Error("Attached file sheet data context appears broken or empty.");
+
+            // Standard target column alignment markers
+            let headerIndex = 0;
+            let headers = rawRows[headerIndex].map(h => String(h).toUpperCase().trim());
+
+            // Scan rows downward if row 0 was just styling blanks
+            while (headers.length === 0 || (!headers.includes("ITEM") && !headers.includes("BARCODE") && !headers.includes("ITEM CODE") && !headers.includes("DESIGN NO"))) {
+                headerIndex++;
+                if (headerIndex >= rawRows.length) throw new Error("Unable to safely locate automated item or structural header row fields.");
+                headers = rawRows[headerIndex].map(h => String(h).toUpperCase().trim());
+            }
+
+            // Map and bind horizontal indexes dynamically based on what each store labels columns
+            const itemIdx = headers.findIndex(h => h.includes("ITEM") || h.includes("BARCODE") || h.includes("DESIGN") || h.includes("STYLE"));
+            const colorIdx = headers.findIndex(h => h.includes("COLOR") || h.includes("COLOUR"));
+
+            // Core standard sizing array markers to harvest out from rows
+            const standardSizingArray = ["M", "L", "XL", "XXL", "3XL", "4XL", "FS", "36", "38", "40", "42", "44"];
+            const sizeMapLookup = [];
+            headers.forEach((h, idx) => {
+                if (standardSizingArray.includes(h)) {
+                    sizeMapLookup.push({ sizeName: h, columnIndex: idx });
+                }
+            });
+
+            if (itemIdx === -1) throw new Error("Could not evaluate structural Item Code column index location mapping.");
+
+            const outputItemsPayload = [];
+
+            // Compile matrix objects beginning immediately below targeted header indexes
+            for (let i = headerIndex + 1; i < rawRows.length; i++) {
+                const currentRow = rawRows[i];
+                const rawCodeStr = currentRow[itemIdx];
+                if (!rawCodeStr || String(rawCodeStr).trim() === "" || String(rawCodeStr).toUpperCase().includes("TOTAL")) continue;
+
+                const cleanItemCode = cleanItemCodeHeuristics(rawCodeStr);
+                const rawColorStr = colorIdx !== -1 ? currentRow[colorIdx] : "ASSORTED";
+                const standardColor = parseStandardizedColorField(rawColorStr);
+
+                // Build sub-object map properties matching sizes
+                const sizesObj = {};
+                sizeMapLookup.forEach(s => {
+                    const value = parseInt(currentRow[s.columnIndex], 10) || 0;
+                    if (value > 0) {
+                        sizesObj[s.sizeName] = value;
+                    }
+                });
+
+                outputItemsPayload.push({
+                    store_code: storeCode,
+                    raw_item_code: String(rawCodeStr).trim(),
+                    clean_item_code: cleanItemCode,
+                    raw_color: String(rawColorStr).trim(),
+                    color: standardColor,
+                    sizes: sizesObj
+                });
+            }
+
+            logs.innerText = `Compiled ${outputItemsPayload.length} rows locally. Purging obsolete cache snapshots and executing server push...`;
+
+            // Stream parsed structural block array directly to Cloudflare edge handler
+            const response = await fetch("/upload_closing_stock", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    category: category,
+                    brand: brand,
+                    itemsData: outputItemsPayload
+                })
+            });
+
+            const result = await response.json();
+            if (!response.ok) throw new Error(result.error || "Internal Server ingestion pipeline exception code error.");
+
+            logs.innerHTML = `<span style="color:green; font-weight:bold;">✔ Snapshot Updated! Processed ${result.rowsProcessed} codes across truth models.</span>`;
+            alert("Closing stock snapshot saved perfectly. Old overlapping values deleted.");
+            fetchActiveMatrixReportFromServer();
+
+        } catch (err) {
+            logs.innerHTML = `<span style="color:red; font-weight:bold;">❌ Parsing Error: ${err.message}</span>`;
+            alert("Processing error: " + err.message);
+        }
+    };
+
+    reader.readAsArrayBuffer(file);
+}
+
+// Pull matrix context report stream array data from Supabase DB tables
+async function fetchActiveMatrixReportFromServer() {
+    const category = document.getElementById("matrixCategory").value;
+    const brand = document.getElementById("matrixBrand").value;
+    const anchor = document.getElementById("matrixTableAnchor");
+
+    if (!category) {
+        alert("Please choose a Target Category to display a matrix compilation view.");
+        return;
+    }
+
+    anchor.innerHTML = `<div style="padding:20px; font-weight:bold; color:#e67e22;">Fetching unified closing numbers and checking dynamic headers...</div>`;
+
+    try {
+        const response = await fetch("/get_stock_matrix", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ category, brand })
+        });
+
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.error);
+
+        currentServerMatrixSizes = data.sizes || [];
+        currentServerMatrixData = data.matrix || [];
+
+        renderCompiledMatrixTableEngine(currentServerMatrixData);
+
+    } catch (err) {
+        anchor.innerHTML = `<span style="color:red; font-weight:bold;">Database Fetch Exception: ${err.message}</span>`;
+    }
+}
+
+// Build standard HTML document node rows utilizing dynamic layout columns grid models
+function renderCompiledMatrixTableEngine(rows) {
+    const anchor = document.getElementById("matrixTableAnchor");
+    if (!rows || rows.length === 0) {
+        anchor.innerText = "No active inventory records matching selected parameters found in current database tracks.";
+        return;
+    }
+
+    const sizeCount = currentServerMatrixSizes.length;
+    
+    // Construct double layer table row structural cell allocations headers
+    let html = `
+        <style>
+            .matrix-tbl { width: 100%; border-collapse: collapse; font-size: 13px; text-align: center; margin-top: 10px; }
+            .matrix-tbl th, .matrix-tbl td { border: 1px solid #ddd; padding: 8px; }
+            .matrix-tbl thead th { background: #2c3e50; color: white; position: sticky; top: 0; }
+            .hdr-rrc { background: #2980b9 !important; color: white; }
+            .hdr-vc { background: #8e44ad !important; color: white; }
+            .hdr-rrb { background: #27ae60 !important; color: white; }
+            .sub-hdr { background: #f8f9fa !important; color: #333; font-weight: bold; font-size: 11px; }
+            .tot-cell { background: #f1f2f6; font-weight: bold; color: #2c3e50; }
+            .row-highlight:hover { background: #f1f2f6; }
+        </style>
+        <table class="matrix-tbl">
+            <thead>
+                <tr>
+                    <th rowspan="2" style="background:#1a252f;">Category</th>
+                    <th rowspan="2" style="background:#1a252f;">Brand</th>
+                    <th rowspan="2" style="background:#1a252f;">Item Code</th>
+                    <th rowspan="2" style="background:#1a252f;">Color</th>
+                    <th colspan="${sizeCount + 1}" class="hdr-rrc">RRC</th>
+                    <th colspan="${sizeCount + 1}" class="hdr-vc">VC</th>
+                    <th colspan="${sizeCount + 1}" class="hdr-rrb">RRB</th>
+                </tr>
+                <tr>
+    `;
+
+    // Render Sub-Header Sizing Strings Loops for each Store Grouping
+    for (let storeLoop = 0; storeLoop < 3; storeLoop++) {
+        currentServerMatrixSizes.forEach(s => {
+            html += `<th class="sub-hdr">${s}</th>`;
+        });
+        html += `<th class="sub-hdr" style="background:#e7e7e7!important; border-right:2px solid #2c3e50;">TOTAL</th>`;
+    }
+
+    html += `</tr></thead><tbody>`;
+
+    // Inject row cells calculations
+    rows.forEach(r => {
+        html += `
+            <tr class="row-highlight">
+                <td style="font-weight:bold; text-align:left;">${r.category}</td>
+                <td style="color:#666; text-align:left;">${r.brand}</td>
+                <td style="font-weight:bold; color:#e67e22;">${r.clean_item_code}</td>
+                <td><span style="background:#f1f2f6; padding:2px 6px; border-radius:3px; font-size:11px; font-weight:bold;">${r.color}</span></td>
+        `;
+
+        // Output RRC Store Sizes Columns Data Loop
+        currentServerMatrixSizes.forEach(s => {
+            const qty = r.rrc_sizes[s] || 0;
+            html += `<td style="${qty === 0 ? 'color:#ccc;' : 'font-weight:bold;'}">${qty}</td>`;
+        });
+        html += `<td class="tot-cell" style="border-right:2px solid #2c3e50;">${r.rrc_total_qty}</td>`;
+
+        // Output VC Store Sizes Columns Data Loop
+        currentServerMatrixSizes.forEach(s => {
+            const qty = r.vc_sizes[s] || 0;
+            html += `<td style="${qty === 0 ? 'color:#ccc;' : 'font-weight:bold;'}">${qty}</td>`;
+        });
+        html += `<td class="tot-cell" style="border-right:2px solid #2c3e50;">${r.vc_total_qty}</td>`;
+
+        // Output RRB Store Sizes Columns Data Loop
+        currentServerMatrixSizes.forEach(s => {
+            const qty = r.rrb_sizes[s] || 0;
+            html += `<td style="${qty === 0 ? 'color:#ccc;' : 'font-weight:bold;'}">${qty}</td>`;
+        });
+        html += `<td class="tot-cell">${r.rrb_total_qty}</td>`;
+
+        html += `</tr>`;
+    });
+
+    html += `</tbody></table>`;
+    anchor.innerHTML = html;
+}
+
+// Live client side filter matching codes quickly
+function applyClientMatrixSearchFilter() {
+    const q = document.getElementById("matrixSearchQuery").value.toUpperCase().trim();
+    if (!q) {
+        renderCompiledMatrixTableEngine(currentServerMatrixData);
+        return;
+    }
+    const filtered = currentServerMatrixData.filter(r => 
+        r.clean_item_code.toUpperCase().includes(q) || 
+        r.color.toUpperCase().includes(q)
+    );
+    renderCompiledMatrixTableEngine(filtered);
+}
+function clearStoreTimestamps() {
+    document.getElementById("time-RRC").innerText = "Select Scope...";
+    document.getElementById("time-VC").innerText = "Select Scope...";
+    document.getElementById("time-RRB").innerText = "Select Scope...";
+    document.getElementById("downloadMatrixBtn").style.display = "none";
+}
+
+// Format UTC database records into clean, local display lines
+function formatDisplayDateTime(dateStr) {
+    if (!dateStr || dateStr === "Never") return "No Active Data";
+    const d = new Date(dateStr);
+    return d.toLocaleDateString('en-IN') + ' ' + d.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
+}
+
+// Hook into backend timestamps during dashboard generation
+async function fetchActiveMatrixReportFromServer() {
+    const category = document.getElementById("matrixCategory").value;
+    const brand = document.getElementById("matrixBrand").value;
+    const anchor = document.getElementById("matrixTableAnchor");
+    const dlBtn = document.getElementById("downloadMatrixBtn");
+
+    if (!category) {
+        alert("Please choose a Target Category to display a matrix compilation view.");
+        return;
+    }
+
+    anchor.innerHTML = `<div style="padding:20px; font-weight:bold; color:#e67e22;">Fetching unified closing numbers and checking dynamic headers...</div>`;
+
+    try {
+        const response = await fetch("/get_stock_matrix", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ category, brand })
+        });
+
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.error);
+
+        currentServerMatrixSizes = data.sizes || [];
+        currentServerMatrixData = data.matrix || [];
+
+        // Update display timestamps on badges
+        document.getElementById("time-RRC").innerText = formatDisplayDateTime(data.timestamps?.RRC);
+        document.getElementById("time-VC").innerText = formatDisplayDateTime(data.timestamps?.VC);
+        document.getElementById("time-RRB").innerText = formatDisplayDateTime(data.timestamps?.RRB);
+
+        if (currentServerMatrixData.length > 0) {
+            dlBtn.style.display = "inline-block";
+        } else {
+            dlBtn.style.display = "none";
+        }
+
+        renderCompiledMatrixTableEngine(currentServerMatrixData);
+
+    } catch (err) {
+        anchor.innerHTML = `<span style="color:red; font-weight:bold;">Database Fetch Exception: ${err.message}</span>`;
+    }
+}
+
+// Flatten multi-store nested sizes structures into nested excel row structures side by side
+function downloadMatrixExcel() {
+    if (!currentServerMatrixData || currentServerMatrixData.length === 0) {
+        alert("No active rows found to generate excel sheets.");
+        return;
+    }
+
+    const category = document.getElementById("matrixCategory").value;
+    const brand = document.getElementById("matrixBrand").value;
+
+    // Create workbook grid matrix
+    const wb = XLSX.utils.book_new();
+    const sheetData = [];
+
+    // Header Layer 1 (Store Groupings)
+    const topHeader = ["Category", "Brand", "Item Code", "Color"];
+    
+    // Add columns padding blocks to match structural nested layouts in output cells
+    // Size columns count + 1 total column for each store
+    const sizeSpan = currentServerMatrixSizes.length + 1;
+    
+    topHeader.push("RRC");
+    for(let i=1; i < sizeSpan; i++) topHeader.push("");
+    topHeader.push("VC");
+    for(let i=1; i < sizeSpan; i++) topHeader.push("");
+    topHeader.push("RRB");
+
+    sheetData.push(topHeader);
+
+    // Header Layer 2 (Sizing Sub-headers)
+    const subHeader = ["", "", "", ""];
+    for (let loop = 0; loop < 3; loop++) {
+        currentServerMatrixSizes.forEach(s => subHeader.push(s));
+        subHeader.push("TOTAL");
+    }
+    sheetData.push(subHeader);
+
+    // Build row item matrices cells array data maps
+    currentServerMatrixData.forEach(r => {
+        const rowLine = [r.category, r.brand, r.clean_item_code, r.color];
+
+        // RRC Quantities
+        currentServerMatrixSizes.forEach(s => rowLine.push(r.rrc_sizes[s] || 0));
+        rowLine.push(r.rrc_total_qty);
+
+        // VC Quantities
+        currentServerMatrixSizes.forEach(s => rowLine.push(r.vc_sizes[s] || 0));
+        rowLine.push(r.vc_total_qty);
+
+        // RRB Quantities
+        currentServerMatrixSizes.forEach(s => rowLine.push(r.rrb_sizes[s] || 0));
+        rowLine.push(r.rrb_total_qty);
+
+        sheetData.push(rowLine);
+    });
+
+    // Convert data to standard matrix excel worksheet sheet arrays
+    const ws = XLSX.utils.aoa_to_sheet(sheetData);
+
+    // Apply native cell merges layout configurations to merge store title grids
+    ws["!merges"] = [
+        { s: { r: 0, c: 0 }, e: { r: 1, c: 0 } }, // Merge Category vertical
+        { s: { r: 0, c: 1 }, e: { r: 1, c: 1 } }, // Merge Brand vertical
+        { s: { r: 0, c: 2 }, e: { r: 1, c: 2 } }, // Merge Item vertical
+        { s: { r: 0, c: 3 }, e: { r: 1, c: 3 } }, // Merge Color vertical
+        // Merge Store horizontal blocks across sub-sizes span arrays
+        { s: { r: 0, c: 4 }, e: { r: 0, c: 4 + sizeSpan - 1 } }, // RRC Block
+        { s: { r: 0, c: 4 + sizeSpan }, e: { r: 0, c: 4 + (sizeSpan * 2) - 1 } }, // VC Block
+        { s: { r: 0, c: 4 + (sizeSpan * 2) }, e: { r: 0, c: 4 + (sizeSpan * 3) - 1 } } // RRB Block
+    ];
+
+    XLSX.utils.book_append_sheet(wb, ws, "Inventory Matrix");
+    
+    // Save target file attachment naming line matches configuration
+    const filename = `${category.replace(/\s+/g, '_')}_${brand.replace(/\s+/g, '_')}_Stock_Matrix.xlsx`;
+    XLSX.writeFile(wb, filename);
+}
+
 function downloadExcel(){
 
     const exportData = reportData.map(r => ({
