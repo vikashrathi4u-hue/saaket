@@ -487,19 +487,20 @@ function handleSpreadsheetUploadProcess() {
             if (rawRows.length < 2) throw new Error("Attached file sheet data context appears broken or empty.");
 
             // Standard target column alignment markers
-            let headerIndex = 0;
-            let headers = rawRows[headerIndex].map(h => String(h).toUpperCase().trim());
+            // Standard target column alignment markers
+let headerIndex = 0;
+let headers = rawRows[headerIndex].map(h => String(h).toUpperCase().trim());
 
-            // Scan rows downward if row 0 was just styling blanks
-            while (headers.length === 0 || (!headers.includes("ITEM") && !headers.includes("BARCODE") && !headers.includes("ITEM CODE") && !headers.includes("DESIGN NO"))) {
-                headerIndex++;
-                if (headerIndex >= rawRows.length) throw new Error("Unable to safely locate automated item or structural header row fields.");
-                headers = rawRows[headerIndex].map(h => String(h).toUpperCase().trim());
-            }
+// Scan rows downward to find where headers live
+while (headers.length === 0 || (!headers.includes("ITEM") && !headers.includes("BARCODE") && !headers.includes("ITEM CODE") && !headers.includes("DESIGN NO") && !headers.includes("ITEMNAME") && !headers.includes("DESCRIPTION"))) {
+    headerIndex++;
+    if (headerIndex >= rawRows.length) throw new Error("Unable to safely locate automated item or structural header row fields.");
+    headers = rawRows[headerIndex].map(h => String(h).toUpperCase().trim());
+}
 
-            // Map and bind horizontal indexes dynamically based on what each store labels columns
-            const itemIdx = headers.findIndex(h => h.includes("ITEM") || h.includes("BARCODE") || h.includes("DESIGN") || h.includes("STYLE"));
-            const colorIdx = headers.findIndex(h => h.includes("COLOR") || h.includes("COLOUR"));
+// Map and bind column indexes dynamically with support for your specific file structure
+const itemIdx = headers.findIndex(h => h.includes("ITEM") || h.includes("BARCODE") || h.includes("DESIGN") || h.includes("STYLE") || h === "DESCRIPTION" || h === "ITEMNAME");
+const colorIdx = headers.findIndex(h => h.includes("COLOR") || h.includes("COLOUR"));
 
             // Core standard sizing array markers to harvest out from rows
             const standardSizingArray = ["M", "L", "XL", "XXL", "3XL", "4XL", "FS", "36", "38", "40", "42", "44"];
@@ -515,12 +516,17 @@ function handleSpreadsheetUploadProcess() {
             const outputItemsPayload = [];
 
             // Compile matrix objects beginning immediately below targeted header indexes
-            for (let i = headerIndex + 1; i < rawRows.length; i++) {
-                const currentRow = rawRows[i];
-                const rawCodeStr = currentRow[itemIdx];
-                if (!rawCodeStr || String(rawCodeStr).trim() === "" || String(rawCodeStr).toUpperCase().includes("TOTAL")) continue;
+            // Compile matrix objects beginning immediately below targeted header indexes
+for (let i = headerIndex + 1; i < rawRows.length; i++) {
+    const currentRow = rawRows[i];
+    
+    // Check if DESCRIPTION holds our design code, otherwise fall back to itemIdx
+    const descIdx = headers.findIndex(h => h === "DESCRIPTION");
+    const rawCodeStr = descIdx !== -1 && currentRow[descIdx] ? currentRow[descIdx] : currentRow[itemIdx];
+    
+    if (!rawCodeStr || String(rawCodeStr).trim() === "" || String(rawCodeStr).toUpperCase().includes("TOTAL")) continue;
 
-                const cleanItemCode = cleanItemCodeHeuristics(rawCodeStr);
+    const cleanItemCode = cleanItemCodeHeuristics(rawCodeStr);
                 const rawColorStr = colorIdx !== -1 ? currentRow[colorIdx] : "ASSORTED";
                 const standardColor = parseStandardizedColorField(rawColorStr);
 
