@@ -24,15 +24,39 @@ export async function onRequestPost(context) {
     // STEP A: THE PURGE RULE
     // Wipe clean old closing snapshots matching this Category + Brand
     // ========================================================
-    const purgeUrl = `${url}/rest/v1/store_closing_stock?category=eq.${encodeURIComponent(category)}&brand=eq.${encodeURIComponent(brand)}`;
-    const purgeResponse = await fetch(purgeUrl, {
-      method: "DELETE",
-      headers: baseHeaders
-    });
+    // ========================================================
+// STEP A: TARGETED STORE QUANTITY RESET
+// Reset only the current store's metrics for this Category + Brand, leaving other stores untouched
+// ========================================================
+const resetUrl = `${url}/rest/v1/store_closing_stock?category=eq.${encodeURIComponent(category)}&brand=eq.${encodeURIComponent(brand)}`;
+const resetPayload = {};
 
-    if (!purgeResponse.ok) {
-      throw new Error(`Failed to clear previous closing stock records from Supabase: ${purgeResponse.statusText}`);
-    }
+// Zero out ONLY the store context currently being uploaded
+if (itemsData.length > 0) {
+  const activeStore = itemsData[0].store_code; // 'RRB', 'VC', or 'RRC'
+  if (activeStore === "RRC") {
+    resetPayload.rrc_sizes = {};
+    resetPayload.rrc_total_qty = 0;
+  } else if (activeStore === "VC") {
+    resetPayload.vc_sizes = {};
+    resetPayload.vc_total_qty = 0;
+  } else if (activeStore === "RRB") {
+    resetPayload.rrb_sizes = {};
+    resetPayload.rrb_total_qty = 0;
+  }
+}
+
+if (Object.keys(resetPayload).length > 0) {
+  const resetResponse = await fetch(resetUrl, {
+    method: "PATCH", // PATCH updates fields on matching records without dropping the row
+    headers: baseHeaders,
+    body: JSON.stringify(resetPayload)
+  });
+
+  if (!resetResponse.ok) {
+    throw new Error(`Failed to reset targeted store closing snapshots: ${resetResponse.statusText}`);
+  }
+}
 
     // ========================================================
     // STEP B: APPLY THE TRUTH HIERARCHY (RRB -> VC -> RRC)
@@ -122,7 +146,7 @@ export async function onRequestPost(context) {
         method: "POST",
         headers: {
           ...baseHeaders,
-          "Prefer": "return=minimal"
+          "Prefer": "resolution=merge-duplicates,return=minimal" // This lets Supabase merge with existing item rows safely!
         },
         body: JSON.stringify(recordsToInsert)
       });
