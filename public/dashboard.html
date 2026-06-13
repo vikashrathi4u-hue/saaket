@@ -122,15 +122,11 @@ if (page === 'stockMatrix') {
     content.innerHTML = `
         <div style="background: white; padding: 25px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); margin-bottom: 25px;">
             <h3 style="margin-top:0; color:#2c3e50;">1. Scope & Operations Pipeline</h3>
-            <div style="display: flex; gap: 20px; align-items: flex-end; flex-wrap: wrap;">
+            <div style="display: flex; gap: 20px; align-items: flex-end; flex-wrap: wrap; margin-bottom: 20px;">
                 <div style="flex: 1; min-width: 180px;">
                     <label style="display:block; margin-bottom:8px; font-weight:bold; color:#555;">Target Operational Category</label>
                     <select id="matrixCategory" style="width:100%; padding:10px; border:1px solid #ccc; border-radius:4px; font-size:14px;" onchange="loadMatrixBrandsDropdown(); clearStoreTimestamps();">
-                        <option value="">-- Select Category --</option>
-                        <option value="SALWAR SUIT">SALWAR SUIT</option>
-                        <option value="KURTI">KURTI</option>
-                        <option value="PLAZO SET">PLAZO SET</option>
-                        <option value="LEHENGA">LEHENGA</option>
+                        <option value="">-- Fetching Data... --</option>
                     </select>
                 </div>
                 <div style="flex: 1; min-width: 180px;">
@@ -153,6 +149,17 @@ if (page === 'stockMatrix') {
                 </div>
                 <div>
                     <button class="action-btn" onclick="handleSpreadsheetUploadProcess()" style="background:#e67e22; color:white; border:none; padding:11px 20px; font-weight:bold; border-radius:4px; cursor:pointer;">Ingest & Wipe Old</button>
+                </div>
+            </div>
+
+            <div style="padding-top:15px; border-top:1px dashed #ddd; display:flex; gap:15px; flex-wrap:wrap; background:#fcfcfc; padding:15px; border-radius:6px;">
+                <div style="display:flex; gap:8px; align-items:center;">
+                    <input type="text" id="newCategoryInput" placeholder="New Category Name..." style="padding:8px; border:1px solid #ccc; border-radius:4px; font-size:13px; width:180px;">
+                    <button onclick="submitNewCategoryToDirectory()" style="background:#34495e; color:white; border:none; padding:8px 12px; border-radius:4px; font-weight:bold; cursor:pointer; font-size:12px;">+ Add Category</button>
+                </div>
+                <div style="display:flex; gap:8px; align-items:center; border-left:1px solid #ddd; padding-left:15px;">
+                    <input type="text" id="newBrandInput" placeholder="New Brand Name..." style="padding:8px; border:1px solid #ccc; border-radius:4px; font-size:13px; width:180px;">
+                    <button onclick="submitNewBrandToActiveCategory()" style="background:#2c3e50; color:white; border:none; padding:8px 12px; border-radius:4px; font-weight:bold; cursor:pointer; font-size:12px;">+ Add Brand to Selected</button>
                 </div>
             </div>
             
@@ -186,7 +193,9 @@ if (page === 'stockMatrix') {
             </div>
         </div>
     `;
-    loadMatrixBrandsDropdown();
+    
+    // Initialize dynamic database-driven dropdown loads
+    fetchMasterDirectoryMapping();
 }
         }
 
@@ -746,7 +755,124 @@ async function fetchActiveMatrixReportFromServer() {
         anchor.innerHTML = `<span style="color:red; font-weight:bold;">Database Fetch Exception: ${err.message}</span>`;
     }
 }
+let globalDirectoryMap = [];
 
+// Pull directories directly from your Supabase tables
+async function fetchMasterDirectoryMapping() {
+    try {
+        const response = await fetch("/manage_directory");
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.error);
+
+        globalDirectoryMap = data;
+        renderMatrixCategoriesDropdown();
+    } catch (err) {
+        console.error("Directory Initialization Error:", err);
+    }
+}
+
+// Extract distinct elements to fill drop downs
+function renderMatrixCategoriesDropdown() {
+    const catSelect = document.getElementById("matrixCategory");
+    if (!catSelect) return;
+
+    const previousValue = catSelect.value;
+    const uniqueCategories = [...new Set(globalDirectoryMap.map(d => d.category))];
+
+    catSelect.innerHTML = `<option value="">-- Select Category --</option>`;
+    uniqueCategories.forEach(c => {
+        catSelect.innerHTML += `<option value="${c}">${c}</option>`;
+    });
+
+    if (uniqueCategories.includes(previousValue)) {
+        catSelect.value = previousValue;
+        loadMatrixBrandsDropdown();
+    } else {
+        loadMatrixBrandsDropdown();
+    }
+}
+
+// Filter and map out brands mapped to the single selected option context
+function loadMatrixBrandsDropdown() {
+    const selectedCategory = document.getElementById("matrixCategory")?.value;
+    const brandSelect = document.getElementById("matrixBrand");
+    if (!brandSelect) return;
+
+    brandSelect.innerHTML = "";
+    if (!selectedCategory) {
+        brandSelect.innerHTML = `<option value="">-- Choose Category First --</option>`;
+        return;
+    }
+
+    // Filter down array records matching choice tracking context
+    const connectedBrands = globalDirectoryMap
+        .filter(d => d.category === selectedCategory && d.brand !== "UNASSIGNED_CORE")
+        .map(d => d.brand);
+
+    brandSelect.innerHTML = `<option value="ALL_BRANDS">View All Brands Combined</option>`;
+    connectedBrands.forEach(b => {
+        brandSelect.innerHTML += `<option value="${b}">${b}</option>`;
+    });
+}
+
+// Action: Create a completely new product segment layer
+async function submitNewCategoryToDirectory() {
+    const name = document.getElementById("newCategoryInput").value.toUpperCase().trim();
+    if (!name) {
+        alert("Please enter a valid Category name string.");
+        return;
+    }
+
+    try {
+        const response = await fetch("/manage_directory", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ category: name, brand: "UNASSIGNED_CORE" })
+        });
+        
+        if (!response.ok) throw new Error("Could not persist category record.");
+
+        document.getElementById("newCategoryInput").value = "";
+        await fetchMasterDirectoryMapping();
+        document.getElementById("matrixCategory").value = name;
+        loadMatrixBrandsDropdown();
+        alert(`Category "${name}" created successfully!`);
+    } catch (err) {
+        alert("Action Exception: " + err.message);
+    }
+}
+
+// Action: Bind a brand line to an active selection profile
+async function submitNewBrandToActiveCategory() {
+    const category = document.getElementById("matrixCategory").value;
+    const brandName = document.getElementById("newBrandInput").value.toUpperCase().trim();
+
+    if (!category) {
+        alert("Please select an active target Category to map this brand to first.");
+        return;
+    }
+    if (!brandName || brandName === "ALL_BRANDS") {
+        alert("Please enter a valid, explicit brand title label.");
+        return;
+    }
+
+    try {
+        const response = await fetch("/manage_directory", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ category: category, brand: brandName })
+        });
+        
+        if (!response.ok) throw new Error("Could not map brand to category context.");
+
+        document.getElementById("newBrandInput").value = "";
+        await fetchMasterDirectoryMapping();
+        document.getElementById("matrixBrand").value = brandName;
+        alert(`Brand "${brandName}" successfully attached to "${category}"!`);
+    } catch (err) {
+        alert("Action Exception: " + err.message);
+    }
+}
 // Flatten multi-store nested sizes structures into nested excel row structures side by side
 function downloadMatrixExcel() {
     if (!currentServerMatrixData || currentServerMatrixData.length === 0) {
