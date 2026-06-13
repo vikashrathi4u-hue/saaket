@@ -994,16 +994,31 @@ function buildDirectoryDisplayGridUI() {
         if (brandsList.length === 0) {
             html += `<span style="font-size:12px; color:#94a3b8; font-style:italic;">No active brand lines assigned.</span>`;
         } else {
-            brandsList.forEach(brand => {
+            brandsList.forEach(item => {
+                const rrcTime = formatDisplayDateTime(item.timestamps?.RRC);
+                const vcTime = formatDisplayDateTime(item.timestamps?.VC);
+                const rrbTime = formatDisplayDateTime(item.timestamps?.RRB);
+
+                // Safe extraction formatting logic preventing null splits crashes
+                const rrcDate = rrcTime.includes(' ') ? rrcTime.split(' ')[0] : rrcTime;
+                const vcDate = vcTime.includes(' ') ? vcTime.split(' ')[0] : vcTime;
+                const rrbDate = rrbTime.includes(' ') ? rrbTime.split(' ')[0] : rrbTime;
+
                 html += `
-                    <div onclick="enterTargetMatrixWorkspace('${cat}', '${brand}')" style="padding:10px; background:white; border:1px solid #e2e8f0; border-radius:6px; cursor:pointer; display:flex; justify-content:space-between; align-items:center; transition:0.2s;" onmouseover="this.style.borderColor='#e67e22'; this.style.background='#fffaf5';" onmouseout="this.style.borderColor='#e2e8f0'; this.style.background='white';">
-                        <strong style="color:#334155; font-size:13px;">${brand}</strong>
-                        <span style="font-size:11px; color:#7f8c8d; background:#f1f2f6; padding:2px 6px; border-radius:4px; font-weight:bold;">Open Matrix ➔</span>
+                    <div onclick="enterTargetMatrixWorkspace('${cat}', '${item.brand}')" style="padding:12px; background:white; border:1px solid #e2e8f0; border-radius:6px; cursor:pointer; transition:0.2s; display:flex; flex-direction:column; gap:6px;" onmouseover="this.style.borderColor='#e67e22'; this.style.background='#fffaf5';" onmouseout="this.style.borderColor='#e2e8f0'; this.style.background='white';">
+                        <div style="display:flex; justify-content:space-between; align-items:center;">
+                            <strong style="color:#2c3e50; font-size:14px;">${item.brand}</strong>
+                            <span style="font-size:11px; color:#e67e22; font-weight:bold;">View Matrix ➔</span>
+                        </div>
+                        <div style="display:grid; grid-template-columns: repeat(3, 1fr); gap:4px; font-size:10px; margin-top:4px; text-align:left; border-top:1px dashed #f1f2f6; padding-top:6px;">
+                            <div><span style="color:#2980b9; font-weight:bold;">RRC:</span> <span style="color:#555;">${rrcDate}</span></div>
+                            <div><span style="color:#8e44ad; font-weight:bold;">VC:</span> <span style="color:#555;">${vcDate}</span></div>
+                            <div><span style="color:#27ae60; font-weight:bold;">RRB:</span> <span style="color:#555;">${rrbDate}</span></div>
+                        </div>
                     </div>
                 `;
             });
         }
-
         html += `
                     </div>
                 </div>
