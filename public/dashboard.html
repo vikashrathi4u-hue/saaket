@@ -120,81 +120,87 @@ let sortDirection = 'asc';
 if (page === 'stockMatrix') {
     title.innerText = "Stock Matrix & Reordering Optimizer";
     content.innerHTML = `
-        <div style="background: white; padding: 25px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); margin-bottom: 25px;">
-            <h3 style="margin-top:0; color:#2c3e50;">1. Scope & Operations Pipeline</h3>
-            <div style="display: flex; gap: 20px; align-items: flex-end; flex-wrap: wrap; margin-bottom: 20px;">
-                <div style="flex: 1; min-width: 180px;">
-                    <label style="display:block; margin-bottom:8px; font-weight:bold; color:#555;">Target Operational Category</label>
-                    <select id="matrixCategory" style="width:100%; padding:10px; border:1px solid #ccc; border-radius:4px; font-size:14px;" onchange="loadMatrixBrandsDropdown(); clearStoreTimestamps();">
-                        <option value="">-- Fetching Data... --</option>
-                    </select>
+        <!-- Main Workspace Router Box -->
+        <div id="matrixWorkspaceRouter">
+            
+            <!-- SECTION A: THE BIRD'S EYE DIRECTORY INDEX -->
+            <div id="matrixDirectoryIndexPage" style="background: white; padding: 25px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.05);">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; border-bottom:2px solid #f4f7f6; padding-bottom:15px;">
+                    <h3 style="margin:0; color:#2c3e50;">Active Inventory Directories</h3>
+                    <div style="display:flex; gap:8px; align-items:center;">
+                        <input type="text" id="newCategoryInput" placeholder="New Category Name..." style="padding:8px; border:1px solid #ccc; border-radius:4px; font-size:13px; width:160px;">
+                        <button onclick="submitNewCategoryToDirectory()" style="background:#2c3e50; color:white; border:none; padding:8px 12px; border-radius:4px; font-weight:bold; cursor:pointer; font-size:12px;">+ Create Category</button>
+                    </div>
                 </div>
-                <div style="flex: 1; min-width: 180px;">
-                    <label style="display:block; margin-bottom:8px; font-weight:bold; color:#555;">Target Brand Scope</label>
-                    <select id="matrixBrand" style="width:100%; padding:10px; border:1px solid #ccc; border-radius:4px; font-size:14px;" onchange="clearStoreTimestamps();">
-                        <option value="">-- Choose Category First --</option>
-                    </select>
-                </div>
-                <div style="flex: 1; min-width: 150px;">
-                    <label style="display:block; margin-bottom:8px; font-weight:bold; color:#555;">Target Store Source</label>
-                    <select id="matrixStore" style="width:100%; padding:10px; border:1px solid #ccc; border-radius:4px; font-size:14px;">
-                        <option value="RRB">RRB (Priority 1 Core)</option>
-                        <option value="VC">VC Store (Priority 2)</option>
-                        <option value="RRC">RRC Store (Priority 3)</option>
-                    </select>
-                </div>
-                <div style="flex: 1; min-width: 220px;">
-                    <label style="display:block; margin-bottom:8px; font-weight:bold; color:#555;">Upload Closing Spreadsheet Export</label>
-                    <input type="file" id="matrixFile" accept=".xlsx, .xls, .csv" style="width:100%; font-size:13px;">
-                </div>
-                <div>
-                    <button class="action-btn" onclick="handleSpreadsheetUploadProcess()" style="background:#e67e22; color:white; border:none; padding:11px 20px; font-weight:bold; border-radius:4px; cursor:pointer;">Ingest & Wipe Old</button>
+                
+                <div id="directoryListGridAnchor" style="display:grid; gap:20px; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));">
+                    <div style="color:#e67e22; font-weight:bold; padding:20px;">Scanning active warehouse metrics portfolios...</div>
                 </div>
             </div>
 
-            <div style="padding-top:15px; border-top:1px dashed #ddd; display:flex; gap:15px; flex-wrap:wrap; background:#fcfcfc; padding:15px; border-radius:6px;">
-                <div style="display:flex; gap:8px; align-items:center;">
-                    <input type="text" id="newCategoryInput" placeholder="New Category Name..." style="padding:8px; border:1px solid #ccc; border-radius:4px; font-size:13px; width:180px;">
-                    <button onclick="submitNewCategoryToDirectory()" style="background:#34495e; color:white; border:none; padding:8px 12px; border-radius:4px; font-weight:bold; cursor:pointer; font-size:12px;">+ Add Category</button>
+            <!-- SECTION B: THE SPECIFIC CORE OPERATIONAL WORKSPACE PAGE (HIDDEN BY DEFAULT) -->
+            <div id="matrixDetailedWorkspacePage" style="display:none;">
+                <div style="background: white; padding: 25px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); margin-bottom: 25px;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
+                        <button onclick="exitWorkspaceToDirectoryIndex()" style="background:#7f8c8d; color:white; border:none; padding:8px 15px; border-radius:4px; font-weight:bold; cursor:pointer; font-size:13px;">⬅ Back to Directory Index</button>
+                        <h3 style="margin:0; color:#e67e22;"><span id="activeWorkspaceCategoryTitle">CATEGORY</span> ➔ <span id="activeWorkspaceBrandTitle">BRAND</span></h3>
+                    </div>
+                    
+                    <div style="display: flex; gap: 20px; align-items: flex-end; flex-wrap: wrap; background:#f9fbfb; padding:15px; border-radius:6px; border:1px solid #eef2f2;">
+                        <!-- Hidden underlying control parameters -->
+                        <input type="hidden" id="matrixCategory">
+                        <input type="hidden" id="matrixBrand">
+                        
+                        <div style="flex: 1; min-width: 150px;">
+                            <label style="display:block; margin-bottom:8px; font-weight:bold; color:#555; font-size:13px;">Target Store Source</label>
+                            <select id="matrixStore" style="width:100%; padding:10px; border:1px solid #ccc; border-radius:4px; font-size:14px;">
+                                <option value="RRB">RRB (Priority 1 Core)</option>
+                                <option value="VC">VC Store (Priority 2)</option>
+                                <option value="RRC">RRC Store (Priority 3)</option>
+                            </select>
+                        </div>
+                        <div style="flex: 2; min-width: 220px;">
+                            <label style="display:block; margin-bottom:8px; font-weight:bold; color:#555; font-size:13px;">Upload Closing Spreadsheet Export</label>
+                            <input type="file" id="matrixFile" accept=".xlsx, .xls, .csv" style="width:100%; font-size:13px;">
+                        </div>
+                        <div>
+                            <button class="action-btn" onclick="handleSpreadsheetUploadProcess()" style="background:#e67e22; color:white; border:none; padding:11px 20px; font-weight:bold; border-radius:4px; cursor:pointer;">Ingest & Wipe Old</button>
+                        </div>
+                    </div>
+                    
+                    <!-- Store Upload Timestamps Bar -->
+                    <div id="storeTimestampsBar" style="display: flex; gap: 15px; margin-top: 20px; padding-top: 15px; border-top: 1px dashed #ddd; font-size: 13px;">
+                        <div style="padding: 6px 12px; background: #ebf5fb; border-left: 4px solid #2980b9; border-radius: 4px; color: #2c3e50;">
+                            <strong>RRC Last Upload:</strong> <span id="time-RRC">Checking...</span>
+                        </div>
+                        <div style="padding: 6px 12px; background: #f5eeeb; border-left: 4px solid #8e44ad; border-radius: 4px; color: #2c3e50;">
+                            <strong>VC Last Upload:</strong> <span id="time-VC">Checking...</span>
+                        </div>
+                        <div style="padding: 6px 12px; background: #eaf2e8; border-left: 4px solid #27ae60; border-radius: 4px; color: #2c3e50;">
+                            <strong>RRB Last Upload:</strong> <span id="time-RRB">Checking...</span>
+                        </div>
+                    </div>
+                    <div id="uploadProgressLogs" style="margin-top:15px; font-size:13px; color:#666; font-style:italic;"></div>
                 </div>
-                <div style="display:flex; gap:8px; align-items:center; border-left:1px solid #ddd; padding-left:15px;">
-                    <input type="text" id="newBrandInput" placeholder="New Brand Name..." style="padding:8px; border:1px solid #ccc; border-radius:4px; font-size:13px; width:180px;">
-                    <button onclick="submitNewBrandToActiveCategory()" style="background:#2c3e50; color:white; border:none; padding:8px 12px; border-radius:4px; font-weight:bold; cursor:pointer; font-size:12px;">+ Add Brand to Selected</button>
-                </div>
-            </div>
-            
-            <div id="storeTimestampsBar" style="display: flex; gap: 15px; margin-top: 20px; padding-top: 15px; border-top: 1px dashed #ddd; font-size: 13px;">
-                <div style="padding: 6px 12px; background: #ebf5fb; border-left: 4px solid #2980b9; border-radius: 4px; color: #2c3e50;">
-                    <strong>RRC Last Upload:</strong> <span id="time-RRC">Select Scope...</span>
-                </div>
-                <div style="padding: 6px 12px; background: #f5eeeb; border-left: 4px solid #8e44ad; border-radius: 4px; color: #2c3e50;">
-                    <strong>VC Last Upload:</strong> <span id="time-VC">Select Scope...</span>
-                </div>
-                <div style="padding: 6px 12px; background: #eaf2e8; border-left: 4px solid #27ae60; border-radius: 4px; color: #2c3e50;">
-                    <strong>RRB Last Upload:</strong> <span id="time-RRB">Select Scope...</span>
-                </div>
-            </div>
-            
-            <div id="uploadProgressLogs" style="margin-top:15px; font-size:13px; color:#666; font-style:italic;"></div>
-        </div>
 
-        <div style="background: white; padding: 25px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.05);">
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
-                <h3 style="margin:0; color:#2c3e50;">2. Multi-Store Size Matrix Grid View</h3>
-                <div style="display:flex; gap:10px; align-items:center;">
-                    <input type="text" id="matrixSearchQuery" placeholder="Search Filter by Cleaned Item ID..." style="padding:8px 12px; border:1px solid #ccc; border-radius:4px; width:220px;" onkeyup="applyClientMatrixSearchFilter()">
-                    <button onclick="fetchActiveMatrixReportFromServer()" style="background:#2c3e50; color:white; border:none; padding:9px 15px; border-radius:4px; font-weight:bold; cursor:pointer;">Generate Summary</button>
-                    <button id="downloadMatrixBtn" onclick="downloadMatrixExcel()" style="background:#27ae60; color:white; border:none; padding:9px 15px; border-radius:4px; font-weight:bold; cursor:pointer; display:none;">Download Matrix Excel</button>
+                <div style="background: white; padding: 25px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.05);">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+                        <h3 style="margin:0; color:#2c3e50;">2. Multi-Store Size Matrix Grid View</h3>
+                        <div style="display:flex; gap:10px; align-items:center;">
+                            <input type="text" id="matrixSearchQuery" placeholder="Search Filter by Cleaned Item ID..." style="padding:8px 12px; border:1px solid #ccc; border-radius:4px; width:220px;" onkeyup="applyClientMatrixSearchFilter()">
+                            <button id="downloadMatrixBtn" onclick="downloadMatrixExcel()" style="background:#27ae60; color:white; border:none; padding:9px 15px; border-radius:4px; font-weight:bold; cursor:pointer; display:none;">Download Matrix Excel</button>
+                        </div>
+                    </div>
+                    
+                    <div style="overflow-x: auto; max-width: 100%;">
+                        <div id="matrixTableAnchor">Loading standard matrices metrics datasets data...</div>
+                    </div>
                 </div>
-            </div>
-            
-            <div style="overflow-x: auto; max-width: 100%;">
-                <div id="matrixTableAnchor">Select a Category and load standard matrices data reports to review stock transfers.</div>
             </div>
         </div>
     `;
     
-    // Initialize dynamic database-driven dropdown loads
+    // Auto query backend table directories to build listing indices right away
     fetchMasterDirectoryMapping();
 }
         }
@@ -950,7 +956,153 @@ function downloadMatrixExcel() {
     const filename = `${category.replace(/\s+/g, '_')}_${brand.replace(/\s+/g, '_')}_Stock_Matrix.xlsx`;
     XLSX.writeFile(wb, filename);
 }
+// Build a card directory layout group out from directory mapping matrices
+function buildDirectoryDisplayGridUI() {
+    const anchor = document.getElementById("directoryListGridAnchor");
+    if (!anchor) return;
 
+    // Group incoming global lists by categories dynamically
+    const categoryClusters = {};
+    globalDirectoryMap.forEach(d => {
+        if (!categoryClusters[d.category]) {
+            categoryClusters[d.category] = [];
+        }
+        if (d.brand !== "UNASSIGNED_CORE") {
+            categoryClusters[d.category].push(d.brand);
+        }
+    });
+
+    let html = "";
+    
+    Object.keys(categoryClusters).forEach(cat => {
+        html += `
+            <div style="background:#f8f9fa; border:1px solid #e2e8f0; border-radius:8px; padding:20px; display:flex; flex-direction:column; justify-content:space-between;">
+                <div>
+                    <h4 style="margin:0 0 15px 0; color:#2c3e50; font-size:16px; border-bottom:2px solid #e67e22; padding-bottom:5px; display:flex; justify-content:space-between; align-items:center;">
+                        <span>${cat}</span>
+                    </h4>
+                    <div style="display:flex; flex-direction:column; gap:8px;">
+        `;
+
+        const brandsList = categoryClusters[cat];
+        if (brandsList.length === 0) {
+            html += `<span style="font-size:12px; color:#94a3b8; font-style:italic;">No active brand lines assigned.</span>`;
+        } else {
+            brandsList.forEach(brand => {
+                html += `
+                    <div onclick="enterTargetMatrixWorkspace('${cat}', '${brand}')" style="padding:10px; background:white; border:1px solid #e2e8f0; border-radius:6px; cursor:pointer; display:flex; justify-content:space-between; align-items:center; transition:0.2s;" onmouseover="this.style.borderColor='#e67e22'; this.style.background='#fffaf5';" onmouseout="this.style.borderColor='#e2e8f0'; this.style.background='white';">
+                        <strong style="color:#334155; font-size:13px;">${brand}</strong>
+                        <span style="font-size:11px; color:#7f8c8d; background:#f1f2f6; padding:2px 6px; border-radius:4px; font-weight:bold;">Open Matrix ➔</span>
+                    </div>
+                `;
+            });
+        }
+
+        html += `
+                    </div>
+                </div>
+                <div style="margin-top:15px; padding-top:10px; border-top:1px dashed #e2e8f0; display:flex; gap:5px;">
+                    <input type="text" id="inlineBrandInput-${cat.replace(/\s+/g, '_')}" placeholder="New Brand..." style="padding:5px; border:1px solid #ccc; border-radius:4px; font-size:12px; flex:1;">
+                    <button onclick="submitInlineBrandToCategory('${cat}')" style="background:#e67e22; color:white; border:none; padding:5px 10px; border-radius:4px; font-size:11px; font-weight:bold; cursor:pointer;">+ Add</button>
+                </div>
+            </div>
+        `;
+    });
+
+    anchor.innerHTML = html;
+}
+
+// Intercept old sync pull methods to update the directory engine layout cards
+async function fetchMasterDirectoryMapping() {
+    try {
+        const response = await fetch("/manage_directory");
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.error);
+
+        globalDirectoryMap = data;
+        buildDirectoryDisplayGridUI();
+    } catch (err) {
+        console.error("Directory Initialization Error:", err);
+    }
+}
+
+// Navigation Router Action: Enter into focused side-by-side matrices table layout
+function enterTargetMatrixWorkspace(category, brand) {
+    document.getElementById("matrixCategory").value = category;
+    document.getElementById("matrixBrand").value = brand;
+    
+    document.getElementById("activeWorkspaceCategoryTitle").innerText = category;
+    document.getElementById("activeWorkspaceBrandTitle").innerText = brand;
+    
+    // Swap screen visibility components
+    document.getElementById("matrixDirectoryIndexPage").style.display = "none";
+    document.getElementById("matrixDetailedWorkspacePage").style.display = "block";
+    
+    // Instantly execute data fetch arrays to draw the table and populate last upload times
+    fetchActiveMatrixReportFromServer();
+}
+
+// Navigation Router Action: Jump back out to homepage indices list grids
+function exitWorkspaceToDirectoryIndex() {
+    document.getElementById("matrixDetailedWorkspacePage").style.display = "none";
+    document.getElementById("matrixDirectoryIndexPage").style.display = "block";
+    
+    // Wipe log elements clear
+    document.getElementById("uploadProgressLogs").innerText = "";
+    
+    // Refresh directory dashboard details context parameters from server tracks
+    fetchMasterDirectoryMapping();
+}
+
+// Inline brand add helper bound specifically to directory UI cells layout sets
+async function submitInlineBrandToCategory(catName) {
+    const inputElement = document.getElementById(`inlineBrandInput-${catName.replace(/\s+/g, '_')}`);
+    const brandName = inputElement.value.toUpperCase().trim();
+
+    if (!brandName || brandName === "ALL_BRANDS") {
+        alert("Please enter a valid brand title text entry.");
+        return;
+    }
+
+    try {
+        const response = await fetch("/manage_directory", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ category: catName, brand: brandName })
+        });
+        
+        if (!response.ok) throw new Error("Could not map brand to category context.");
+
+        inputElement.value = "";
+        await fetchMasterDirectoryMapping();
+    } catch (err) {
+        alert("Action Exception: " + err.message);
+    }
+}
+
+// Re-hook old category engine creations directly onto dashboard elements router arrays
+async function submitNewCategoryToDirectory() {
+    const name = document.getElementById("newCategoryInput").value.toUpperCase().trim();
+    if (!name) {
+        alert("Please enter a valid Category name string.");
+        return;
+    }
+
+    try {
+        const response = await fetch("/manage_directory", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ category: name, brand: "UNASSIGNED_CORE" })
+        });
+        
+        if (!response.ok) throw new Error("Could not persist category record.");
+
+        document.getElementById("newCategoryInput").value = "";
+        await fetchMasterDirectoryMapping();
+    } catch (err) {
+        alert("Action Exception: " + err.message);
+    }
+}
 function downloadExcel(){
 
     const exportData = reportData.map(r => ({
